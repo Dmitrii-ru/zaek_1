@@ -31,10 +31,6 @@ yarn-error.log*
 staticfiles/
 
 
-# Статические файлы (собранные collectstatic)
-/static/
+
 /staticfiles/
 /static_root/
-
-# Медиа-файлы
-/media/

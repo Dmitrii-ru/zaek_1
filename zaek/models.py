@@ -65,7 +65,6 @@ class ZaekQuestion(models.Model):
 
     name = models.TextField(
         verbose_name='Вопрос',
-
         blank=False,
         null=False,
         help_text='Текст вопроса'
@@ -75,6 +74,12 @@ class ZaekQuestion(models.Model):
         auto_now_add=True
     )
 
+    comment = models.TextField(
+        verbose_name='Комментарий',
+        blank=True,
+        null=True,
+        help_text='Комментарий'
+    )
 
     class Meta:
         verbose_name = 'Вопрос'
@@ -120,4 +125,70 @@ class ZaekAnswer(models.Model):
         return f'Ответ на "{self.question.name[:30]}..."'
 
 
+class ZaekUser(models.Model):
+    id_telegram = models.CharField(
+        verbose_name='ID в Telegram',
+        max_length=30,
+        blank=False,
+        null=False,
+        unique=True,
+        help_text='Уникальный идентификатор пользователя в Telegram'
+    )
+
+    name_telegram = models.CharField(
+        verbose_name='Имя в телегам в Telegram',
+        max_length=200,
+        blank=False,
+        null=False,
+        unique=True,
+        help_text='Уникальный идентификатор пользователя в Telegram'
+    )
+
+    total_attempts = models.PositiveIntegerField(
+        verbose_name='Всего попыток',
+        default=0,
+        help_text='Общее количество данных пользователем ответов'
+    )
+
+    correct_attempts = models.PositiveIntegerField(
+        verbose_name='Правильные ответы',
+        default=0,
+        help_text='Количество верных ответов пользователя'
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name='Дата регистрации',
+        auto_now_add=True
+    )
+
+    last_activity = models.DateTimeField(
+        verbose_name='Последняя активность',
+        auto_now=True,
+        help_text='Время последнего взаимодействия с ботом'
+    )
+
+    show = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['id_telegram']),
+        ]
+
+    def __str__(self):
+        return f'Пользователь Telegram (ID: {self.id_telegram} - {self.name_telegram})'
+
+    def increment_attempts(self, is_correct: bool):
+        self.total_attempts += 1
+        if is_correct:
+            self.correct_attempts += 1
+        self.save()
+
+    @property
+    def success_rate(self) -> float:
+        if self.total_attempts == 0:
+            return 0.0
+        return round((self.correct_attempts / self.total_attempts) * 100, 2)
 

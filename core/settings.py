@@ -23,7 +23,8 @@ INSTALLED_APPS = [
 
 INSTALLED_APPS+= [
     'zaek',
-    'nested_admin'
+    'nested_admin',
+    'rest_framework'
 ]
 
 MIDDLEWARE = [
@@ -88,8 +89,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-
-
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = [
@@ -97,9 +96,5 @@ STATICFILES_DIRS = [
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-
-
-
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

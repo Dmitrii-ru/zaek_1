@@ -1,8 +1,11 @@
+from django.http import HttpResponse
 from django.shortcuts import render
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from .fanc import get_random_question_data
 from .models import ZaekUser, ZaekQuestion, ZaekAnswer
 from .serializers import ZaekUserSerializer
 import random
@@ -77,3 +80,8 @@ class UpdateStatsView(APIView):
                 {"error": "User not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+async def test_func(request):
+    await get_random_question_data()
+    return HttpResponse("Hello, World!")

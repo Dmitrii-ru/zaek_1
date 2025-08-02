@@ -99,9 +99,8 @@ class ZaekAnswer(models.Model):
         on_delete=models.CASCADE,
         related_name='answers'
     )
-    text = models.CharField(
+    text = models.TextField(
         verbose_name='Ответ',
-        max_length=255,
         blank=False,
         null=False,
         help_text='Подробный текст ответа'

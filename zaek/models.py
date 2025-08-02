@@ -103,7 +103,7 @@ class ZaekAnswer(models.Model):
         verbose_name='Ответ',
         blank=False,
         null=False,
-        max_length=64,
+        max_length=119,
         help_text='Подробный текст ответа'
     )
     is_correct = models.BooleanField(

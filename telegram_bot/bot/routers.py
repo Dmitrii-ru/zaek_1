@@ -50,9 +50,46 @@ async def handle_answer(callback: types.CallbackQuery):
     await callback.answer()
 
 
+# @zaek_routers.callback_query(lambda c: c.data == 'question')
+# async def zaek_question(callback: types.CallbackQuery):
+#     # Добавляем await перед вызовом асинхронной функции
+#     question_data = await get_random_question_data()
+#
+#     if not question_data:
+#         await callback.answer("Вопросы не найдены", show_alert=True)
+#         return
+#
+#     question_text = (
+#         f"<b>Продукт:</b> {question_data['product'] if question_data['product'] else ''}\n"
+#         f"<b>Вопрос:</b> {question_data['question']}"
+#     )
+#
+#     builder = InlineKeyboardBuilder()
+#     answers = question_data['answers']
+#     random.shuffle(answers)
+#
+#     for answer in answers:
+#         builder.row(InlineKeyboardButton(
+#             text=answer['text'],
+#             callback_data=f"answer_{answer['is_correct']}"
+#         ))
+#
+#     await callback.message.answer(
+#         question_text,
+#         reply_markup=builder.as_markup(),
+#         parse_mode="HTML"
+#     )
+#
+#     try:
+#         await callback.message.edit_reply_markup(reply_markup=None)
+#     except:
+#         pass
+#
+#     await callback.answer()
+
+
 @zaek_routers.callback_query(lambda c: c.data == 'question')
 async def zaek_question(callback: types.CallbackQuery):
-    # Добавляем await перед вызовом асинхронной функции
     question_data = await get_random_question_data()
 
     if not question_data:
@@ -74,11 +111,35 @@ async def zaek_question(callback: types.CallbackQuery):
             callback_data=f"answer_{answer['is_correct']}"
         ))
 
-    await callback.message.answer(
-        question_text,
-        reply_markup=builder.as_markup(),
-        parse_mode="HTML"
-    )
+    # Обработка изображения
+    if question_data.get('image'):
+        try:
+            from aiogram.types import FSInputFile
+
+            # Используем прямое чтение файла с диска
+            photo = FSInputFile(question_data['image'].path)
+
+            await callback.message.answer_photo(
+                photo=photo,
+                caption=question_text,
+                reply_markup=builder.as_markup(),
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            print(f"Ошибка отправки изображения: {str(e)}")
+            # Fallback на текстовое сообщение
+            await callback.message.answer(
+                text=question_text,
+                reply_markup=builder.as_markup(),
+                parse_mode="HTML"
+            )
+
+    else:
+        await callback.message.answer(
+            text=question_text,
+            reply_markup=builder.as_markup(),
+            parse_mode="HTML"
+        )
 
     try:
         await callback.message.edit_reply_markup(reply_markup=None)

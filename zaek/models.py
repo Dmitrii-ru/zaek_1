@@ -37,6 +37,15 @@ class ZaekProduct(models.Model):
         null=False,
         help_text='Уникальное название'
     )
+
+    image = models.ImageField(
+        verbose_name='Изображение',
+        upload_to='products/',  # Папка для загрузки изображений
+        blank=True,             # Необязательное поле
+        null=True,              # Разрешить NULL в БД
+        help_text='Изображение продукта (необязательно)'
+    )
+
     class Meta:
         verbose_name = 'Продукт'
         verbose_name_plural = 'Продукты'

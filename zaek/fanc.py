@@ -64,6 +64,7 @@ def get_random_question_data():
         "product": question.product.name if question.product else None,
         "question": question.name,
         "comment": question.comment,
+        "image":question.product.image if question.product else None,
         "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]]  # Берем максимум 4 ответа
     }
 

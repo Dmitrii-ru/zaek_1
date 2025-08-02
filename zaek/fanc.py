@@ -24,6 +24,7 @@ def create_or_get_zaek_user(id_telegram, name_telegram=None):
         'correct_attempts': user.correct_attempts
     }
 
+
 @sync_to_async
 def get_random_question_data():
     """Возвращает данные случайного вопроса с ответами"""
@@ -34,37 +35,38 @@ def get_random_question_data():
     question = random.choice(questions)
     answers = list(ZaekAnswer.objects.filter(question=question))
 
-    # Если ответов меньше 4, добираем недостающие
-    if len(answers) < 4:
-        needed = 4 - len(answers)
-
-        # Пробуем взять из связанного продукта (если он есть)
-        if question.product:
-            product_answers = list(ZaekAnswer.objects.filter(
-                question__product=question.product
-            ).exclude(question=question))
-            random.shuffle(product_answers)
-            answers.extend(product_answers[:needed])
+    # Проверяем именно 2 ответа (не меньше 4)
+    if len(answers) != 2:  # Если ответов не 2, то добираем до 4
+        if len(answers) < 4:
             needed = 4 - len(answers)
 
-        # Если все еще не хватает, берем из той же темы
-        if needed > 0:
-            topic_answers = list(ZaekAnswer.objects.filter(
-                question__topic=question.topic
-            ).exclude(question=question))
-            random.shuffle(topic_answers)
-            answers.extend(topic_answers[:needed])
+            # Пробуем взять из связанного продукта (если он есть)
+            if question.product:
+                product_answers = list(ZaekAnswer.objects.filter(
+                    question__product=question.product
+                ).exclude(question=question))
+                random.shuffle(product_answers)
+                answers.extend(product_answers[:needed])
+                needed = 4 - len(answers)
+
+            # Если все еще не хватает, берем из той же темы
+            if needed > 0:
+                topic_answers = list(ZaekAnswer.objects.filter(
+                    question__topic=question.topic
+                ).exclude(question=question))
+                random.shuffle(topic_answers)
+                answers.extend(topic_answers[:needed])
 
     # Перемешиваем ответы перед возвратом
     random.shuffle(answers)
 
-    print([{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]])
     return {
         "product": question.product.name if question.product else None,
         "question": question.name,
         "comment": question.comment,
         "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]]  # Берем максимум 4 ответа
     }
+
 
 
 

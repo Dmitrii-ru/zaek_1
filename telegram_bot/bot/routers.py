@@ -96,29 +96,30 @@ async def zaek_question(callback: types.CallbackQuery):
         await callback.answer("Вопросы не найдены", show_alert=True)
         return
 
+    # Формируем текст с нумерованными ответами
+    str_answer = ""
+    for inx, answer in enumerate(question_data['answers']):
+        str_answer += f'{inx+1}. {answer["text"]}\n'  # Добавляем текст ответа и перенос строки
+
     question_text = (
-        f"<b>Продукт:</b> {question_data['product'] if question_data['product'] else ''}\n"
-        f"<b>Вопрос:</b> {question_data['question']}"
+        f"<b>Продукт:</b> {question_data['product'] if question_data['product'] else ''}\n\n"
+        f"<b>Вопрос:</b> {question_data['question']}\n\n"
+        f'<b>Варианты ответов:</b>\n{str_answer}'
     )
 
+    # Создаем клавиатуру с номерами
     builder = InlineKeyboardBuilder()
-    answers = question_data['answers']
-    random.shuffle(answers)
-
-    for answer in answers:
+    for inx, answer in enumerate(question_data['answers']):
         builder.row(InlineKeyboardButton(
-            text=answer['text'],
-            callback_data=f"answer_{answer['is_correct']}"
+            text=str(inx+1),  # Только номер
+            callback_data=f"answer_{answer['is_correct']}"  # Сохраняем правильность
         ))
 
     # Обработка изображения
     if question_data.get('image'):
         try:
             from aiogram.types import FSInputFile
-
-            # Используем прямое чтение файла с диска
             photo = FSInputFile(question_data['image'].path)
-
             await callback.message.answer_photo(
                 photo=photo,
                 caption=question_text,
@@ -127,13 +128,11 @@ async def zaek_question(callback: types.CallbackQuery):
             )
         except Exception as e:
             print(f"Ошибка отправки изображения: {str(e)}")
-            # Fallback на текстовое сообщение
             await callback.message.answer(
                 text=question_text,
                 reply_markup=builder.as_markup(),
                 parse_mode="HTML"
             )
-
     else:
         await callback.message.answer(
             text=question_text,

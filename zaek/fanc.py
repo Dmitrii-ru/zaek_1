@@ -27,7 +27,7 @@ def create_or_get_zaek_user(id_telegram, name_telegram=None):
 
 @sync_to_async
 def get_random_question_data():
-    """Возвращает данные случайного вопроса с ответами"""
+    """Возвращает данные вопроса с 4 уникальными ответами (или меньше, если невозможно)."""
     questions = list(ZaekQuestion.objects.all())
     if not questions:
         return None
@@ -35,37 +35,45 @@ def get_random_question_data():
     question = random.choice(questions)
     answers = list(ZaekAnswer.objects.filter(question=question))
 
-    # Проверяем именно 2 ответа (не меньше 4)
-    if len(answers) != 2:  # Если ответов не 2, то добираем до 4
-        if len(answers) < 4:
-            needed = 4 - len(answers)
+    # Собираем уникальные ответы (без дубликатов по тексту)
+    unique_answers = {}
+    for a in answers:
+        if a.text not in unique_answers:
+            unique_answers[a.text] = a
 
-            # Пробуем взять из связанного продукта (если он есть)
-            if question.product:
-                product_answers = list(ZaekAnswer.objects.filter(
-                    question__product=question.product
-                ).exclude(question=question))
-                random.shuffle(product_answers)
-                answers.extend(product_answers[:needed])
-                needed = 4 - len(answers)
+    # Если не хватает, добираем из связанных вопросов
+    if len(unique_answers) < 4:
+        # Пробуем взять из продукта
+        if question.product:
+            product_answers = ZaekAnswer.objects.filter(
+                question__product=question.product
+            ).exclude(question=question)
+            for a in product_answers:
+                if a.text not in unique_answers and len(unique_answers) < 4:
+                    unique_answers[a.text] = a
 
-            # Если все еще не хватает, берем из той же темы
-            if needed > 0:
-                topic_answers = list(ZaekAnswer.objects.filter(
-                    question__topic=question.topic
-                ).exclude(question=question))
-                random.shuffle(topic_answers)
-                answers.extend(topic_answers[:needed])
+        # Если все еще не хватает, берем из темы
+        if len(unique_answers) < 4:
+            topic_answers = ZaekAnswer.objects.filter(
+                question__topic=question.topic
+            ).exclude(question=question)
+            for a in topic_answers:
+                if a.text not in unique_answers and len(unique_answers) < 4:
+                    unique_answers[a.text] = a
 
-    # Перемешиваем ответы перед возвратом
+    # Преобразуем в список и перемешиваем
+
+    answers = list(unique_answers.values())
     random.shuffle(answers)
+
+
 
     return {
         "product": question.product.name if question.product else None,
         "question": question.name,
         "comment": question.comment,
-        "image":question.product.image if question.product else None,
-        "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]]  # Берем максимум 4 ответа
+        "image": question.product.image if question.product else None,
+        "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]],  # Берём максимум 4
     }
 
 

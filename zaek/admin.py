@@ -44,14 +44,14 @@ class ZaekAnswerInline(nested_admin.NestedTabularInline):
 
 
 class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
-    list_display = ['name', 'topic', 'product']
-    list_filter = ['topic', 'product']
+    list_display = ['name',  'product']
+    list_filter = ['product']
     search_fields = ['name']
     inlines = [ZaekAnswerInline]  # Вложенные ответы
 
     fieldsets = (
         (None, {
-            'fields': ('name', 'topic', 'product', 'comment')
+            'fields': ('name',  'product', 'comment')
         }),
     )
 
@@ -59,7 +59,7 @@ class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
 class ZaekQuestionInline(nested_admin.NestedTabularInline):
     model = ZaekQuestion
     extra = 1
-    fields = ['name', 'topic', 'comment']
+    fields = ['name', 'comment']
     inlines = [ZaekAnswerInline]  # Вложенные ответы
     verbose_name = "Вопрос"
     verbose_name_plural = "Вопросы"
@@ -73,7 +73,7 @@ class ZaekProductAdmin(nested_admin.NestedModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('art', 'name', 'image')
+            'fields': ('art', 'name', 'image','topic')
         }),
     )
 

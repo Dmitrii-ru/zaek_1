@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class ZaekTopic(models.Model):
     name = models.CharField(
         verbose_name='Название темы',
@@ -20,14 +19,13 @@ class ZaekTopic(models.Model):
         return self.name
 
 class ZaekProduct(models.Model):
-
-    art  = models.CharField(
+    art = models.CharField(
         verbose_name='Артикул',
         max_length=100,
         unique=True,
         blank=False,
         null=False,
-        help_text='Уникальной артикул (макс. 100 символов)'
+        help_text='Уникальный артикул (макс. 100 символов)'
     )
 
     name = models.TextField(
@@ -35,14 +33,24 @@ class ZaekProduct(models.Model):
         unique=True,
         blank=False,
         null=False,
-        help_text='Уникальное название'
+        help_text='Уникальное название продукта'
+    )
+
+    topic = models.ForeignKey(  # Изменено на ForeignKey (один продукт - одна тема)
+        ZaekTopic,
+        verbose_name='Тема',
+        related_name='products',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text='Тема, к которой относится продукт'
     )
 
     image = models.ImageField(
         verbose_name='Изображение',
-        upload_to='products/',  # Папка для загрузки изображений
-        blank=True,             # Необязательное поле
-        null=True,              # Разрешить NULL в БД
+        upload_to='products/',
+        blank=True,
+        null=True,
         help_text='Изображение продукта (необязательно)'
     )
 
@@ -55,14 +63,16 @@ class ZaekProduct(models.Model):
         return f'{self.art} - {self.name}'
 
 class ZaekQuestion(models.Model):
-    topic = models.ForeignKey(
+    topic = models.ForeignKey(  # Восстановлена связь с темой
         ZaekTopic,
         verbose_name='Тема',
         on_delete=models.CASCADE,
-        related_name='questions'
+        related_name='questions',
+        help_text='Тема вопроса',
+        null=True
     )
 
-    product = models.ForeignKey(
+    product = models.ForeignKey(  # Оставлена связь с продуктом (если нужна)
         ZaekProduct,
         verbose_name='Связанный продукт',
         on_delete=models.SET_NULL,
@@ -78,28 +88,29 @@ class ZaekQuestion(models.Model):
         null=False,
         help_text='Текст вопроса'
     )
-    created_at = models.DateTimeField(
-        verbose_name='Дата создания',
-        auto_now_add=True
-    )
 
     comment = models.TextField(
         verbose_name='Комментарий',
         blank=True,
         null=True,
-        help_text='Комментарий'
+        help_text='Дополнительный комментарий'
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name='Дата создания',
+        auto_now_add=True
     )
 
     class Meta:
         verbose_name = 'Вопрос'
         verbose_name_plural = 'Вопросы'
         ordering = ['-created_at']
-        unique_together = ['topic', 'name']  # Один вопрос в одной теме
+        unique_together = ['topic', 'name']
 
     def __str__(self):
-        return f'{self.topic.name}: {self.name[:50]}'
+        return f': {self.name[:50]}'
 
-
+# Остальные модели (ZaekAnswer, ZaekUser) остаются без изменений
 
 class ZaekAnswer(models.Model):
     question = models.ForeignKey(
@@ -108,17 +119,20 @@ class ZaekAnswer(models.Model):
         on_delete=models.CASCADE,
         related_name='answers'
     )
+
     text = models.TextField(
         verbose_name='Ответ',
         blank=False,
         null=False,
         max_length=119,
-        help_text='Подробный текст ответа'
+        help_text='Текст ответа'
     )
+
     is_correct = models.BooleanField(
         verbose_name='Правильный ответ',
         default=False
     )
+
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
         auto_now_add=True
@@ -129,9 +143,10 @@ class ZaekAnswer(models.Model):
         verbose_name_plural = 'Ответы'
         ordering = ['-is_correct', 'created_at']
 
-
     def __str__(self):
         return f'Ответ на "{self.question.name[:30]}..."'
+
+# Модель ZaekUser остаётся без изменений
 
 
 class ZaekUser(models.Model):

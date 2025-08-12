@@ -96,6 +96,7 @@ def get_random_question_data():
         answer = [{"text": p.name, "is_correct": False} for p in products_with_images[:3] if p.name!=random_product_name]
         true_answer = {"text": random_product.name, "is_correct": True}
         answer.append(true_answer)
+        random.shuffle(answer)
 
         return {
             "product": '',

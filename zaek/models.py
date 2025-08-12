@@ -124,7 +124,7 @@ class ZaekAnswer(models.Model):
         verbose_name='Ответ',
         blank=False,
         null=False,
-        max_length=119,
+        max_length=500,
         help_text='Текст ответа'
     )
 

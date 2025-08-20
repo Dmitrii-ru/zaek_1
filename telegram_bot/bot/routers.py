@@ -24,13 +24,7 @@ async def zaek_user(callback: types.CallbackQuery):
 
 @zaek_routers.callback_query(lambda c: c.data.startswith('answer_'))
 async def handle_answer(callback: types.CallbackQuery):
-    print(callback.data, "____________________________________________________________++++++++++++++++++++++++")
-
     rout_pref,pref, question_id, is_correct = callback.data.split('_')
-    print(rout_pref)
-    print(pref)
-    print(question_id)
-    print(is_correct)
     is_correct = is_correct == 'True'
 
     if is_correct:
@@ -73,6 +67,14 @@ async def zaek_question(callback: types.CallbackQuery):
     if not question_data:
         await callback.answer("Вопросы не найдены", show_alert=True)
         return
+
+    if question_data.get('reset_occurred'):
+        reset_message = (
+            "🎉 Поздравляем! Вы ответили на ВСЕ вопросы верно!\n"
+            "Начинаем заново! 🚀"
+        )
+        await callback.message.answer(reset_message)
+
 
     # Формируем текст с нумерованными ответами
     str_answer = ""

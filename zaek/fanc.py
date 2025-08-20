@@ -34,11 +34,12 @@ def get_random_question_data(telegram_id):
     answered_ids = {int(qid) for qid in answered_questions if qid.isdigit()}
     questions = list(ZaekQuestion.objects.exclude(id__in=answered_ids))
     print(answered_ids)
-
+    reset_occurred = False
     if not questions:
         # Если все вопросы отвечены, сбрасываем статистику
         user_stats_service.reset_user_stats(telegram_id)
         questions = list(ZaekQuestion.objects.all())
+        reset_occurred = True
 
     if not questions:
         return None
@@ -84,6 +85,7 @@ def get_random_question_data(telegram_id):
             "comment": question.comment,
             "image": question.product.image if question.product else None,
             "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]],
+            "reset_occurred": reset_occurred
         }
     else:
         products_with_images = ZaekProduct.objects.exclude(image__isnull=True).exclude(image='')
@@ -106,6 +108,7 @@ def get_random_question_data(telegram_id):
             "comment": '',
             "image": random_product.image,
             "answers": answer,
+            "reset_occurred": reset_occurred
         }
 
 @sync_to_async

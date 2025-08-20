@@ -1,5 +1,7 @@
 from asgiref.sync import sync_to_async
 import random
+
+from core.redis import user_stats_service
 from zaek.models import ZaekUser, ZaekQuestion, ZaekAnswer, ZaekProduct
 
 
@@ -25,17 +27,19 @@ def create_or_get_zaek_user(id_telegram, name_telegram=None):
         'correct_attempts': user.correct_attempts
     }
 
-
-
-
-
-
-
 @sync_to_async
-def get_random_question_data():
-    """Возвращает данные вопроса с 4 уникальными ответами (или меньше, если невозможно)."""
+def get_random_question_data(telegram_id):
+    """Возвращает данные вопроса, исключая уже отвеченные верно"""
+    answered_questions = user_stats_service.get_answered_questions(telegram_id)
+    answered_ids = {int(qid) for qid in answered_questions if qid.isdigit()}
+    questions = list(ZaekQuestion.objects.exclude(id__in=answered_ids))
+    print(answered_ids)
 
-    questions = list(ZaekQuestion.objects.all())
+    if not questions:
+        # Если все вопросы отвечены, сбрасываем статистику
+        user_stats_service.reset_user_stats(telegram_id)
+        questions = list(ZaekQuestion.objects.all())
+
     if not questions:
         return None
 
@@ -44,7 +48,7 @@ def get_random_question_data():
         question = random.choice(questions)
         answers = list(ZaekAnswer.objects.filter(question=question))
 
-        # Собираем уникальные ответы (без дубликатов по тексту)
+        # Собираем уникальные ответы
         unique_answers = {}
         for a in answers:
             if a.text not in unique_answers:
@@ -52,7 +56,6 @@ def get_random_question_data():
 
         # Если не хватает, добираем из связанных вопросов
         if len(unique_answers) < 4:
-            # Пробуем взять из продукта
             if question.product:
                 product_answers = ZaekAnswer.objects.filter(
                     question__product=question.product
@@ -62,8 +65,6 @@ def get_random_question_data():
                         a.is_correct = False
                         unique_answers[a.text] = a
 
-
-            # Если все еще не хватает, берем из темы
             if len(unique_answers) < 4:
                 topic_answers = ZaekAnswer.objects.filter(
                     question__topic=question.topic
@@ -77,44 +78,35 @@ def get_random_question_data():
         random.shuffle(answers)
 
         return {
+            "question_id": f"question_{question.id}",  # Используем обычный ID
             "product": question.product.name if question.product else None,
             "question": question.name,
             "comment": question.comment,
             "image": question.product.image if question.product else None,
-            "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]],  # Берём максимум 4
+            "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]],
         }
-
-
     else:
         products_with_images = ZaekProduct.objects.exclude(image__isnull=True).exclude(image='')
         if not products_with_images.exists():
-            return None  # Если нет продуктов с изображениями
+            return None
 
         random_product = random.choice(products_with_images)
         random_product_name = random_product.name
 
-        answer = [{"text": p.name, "is_correct": False} for p in products_with_images[:3] if p.name!=random_product_name]
+        answer = [{"text": p.name, "is_correct": False} for p in products_with_images[:3] if
+                  p.name != random_product_name]
         true_answer = {"text": random_product.name, "is_correct": True}
         answer.append(true_answer)
         random.shuffle(answer)
 
         return {
+            "question_id": f"image_{random_product.id}",  # ID для вопросов с картинками
             "product": '',
             "question": "Что на фотографии?",
             "comment": '',
             "image": random_product.image,
-            "answers":answer,
+            "answers": answer,
         }
-
-
-
-
-
-
-
-
-
-
 
 @sync_to_async
 def update_user_stats(telegram_id, is_correct):

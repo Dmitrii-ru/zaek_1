@@ -3,7 +3,8 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import random
 from zaek.fanc import create_or_get_zaek_user, get_random_question_data, update_user_stats
-
+from asgiref.sync import sync_to_async
+from core.redis import user_stats_service
 zaek_routers = Router()
 
 
@@ -23,11 +24,25 @@ async def zaek_user(callback: types.CallbackQuery):
 
 @zaek_routers.callback_query(lambda c: c.data.startswith('answer_'))
 async def handle_answer(callback: types.CallbackQuery):
-    _, is_correct = callback.data.split('_')
+    print(callback.data, "____________________________________________________________++++++++++++++++++++++++")
+
+    rout_pref,pref, question_id, is_correct = callback.data.split('_')
+    print(rout_pref)
+    print(pref)
+    print(question_id)
+    print(is_correct)
     is_correct = is_correct == 'True'
 
-    result_text = "✅ Правильный ответ!" if is_correct else "❌ Неверный ответ!"
-    # Добавляем await перед вызовом асинхронной функции
+    if is_correct:
+        result_text = "✅ Правильный ответ!"
+        if pref!='image':
+            await sync_to_async(user_stats_service.add_correct_answer)(
+                str(callback.from_user.id), question_id
+            )
+    else:
+        result_text = "❌ Неверный ответ!"
+
+
     await update_user_stats(str(callback.from_user.id), is_correct)
 
     builder = InlineKeyboardBuilder()
@@ -50,47 +65,10 @@ async def handle_answer(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# @zaek_routers.callback_query(lambda c: c.data == 'question')
-# async def zaek_question(callback: types.CallbackQuery):
-#     # Добавляем await перед вызовом асинхронной функции
-#     question_data = await get_random_question_data()
-#
-#     if not question_data:
-#         await callback.answer("Вопросы не найдены", show_alert=True)
-#         return
-#
-#     question_text = (
-#         f"<b>Продукт:</b> {question_data['product'] if question_data['product'] else ''}\n"
-#         f"<b>Вопрос:</b> {question_data['question']}"
-#     )
-#
-#     builder = InlineKeyboardBuilder()
-#     answers = question_data['answers']
-#     random.shuffle(answers)
-#
-#     for answer in answers:
-#         builder.row(InlineKeyboardButton(
-#             text=answer['text'],
-#             callback_data=f"answer_{answer['is_correct']}"
-#         ))
-#
-#     await callback.message.answer(
-#         question_text,
-#         reply_markup=builder.as_markup(),
-#         parse_mode="HTML"
-#     )
-#
-#     try:
-#         await callback.message.edit_reply_markup(reply_markup=None)
-#     except:
-#         pass
-#
-#     await callback.answer()
-
-
 @zaek_routers.callback_query(lambda c: c.data == 'question')
 async def zaek_question(callback: types.CallbackQuery):
-    question_data = await get_random_question_data()
+    telegram_id = str(callback.from_user.id)
+    question_data = await get_random_question_data(telegram_id)
 
     if not question_data:
         await callback.answer("Вопросы не найдены", show_alert=True)
@@ -99,7 +77,7 @@ async def zaek_question(callback: types.CallbackQuery):
     # Формируем текст с нумерованными ответами
     str_answer = ""
     for inx, answer in enumerate(question_data['answers']):
-        str_answer += f'{inx+1}. {answer["text"]}\n'  # Добавляем текст ответа и перенос строки
+        str_answer += f'{inx+1}. {answer["text"]}\n'
 
     question_text = (
         f"<b>Продукт:</b> {question_data['product'] if question_data['product'] else ''}\n\n"
@@ -107,12 +85,12 @@ async def zaek_question(callback: types.CallbackQuery):
         f'<b>Варианты ответов:</b>\n{str_answer}'
     )
 
-    # Создаем клавиатуру с номерами
+    # Создаем клавиатуру с номерами, включая ID вопроса в callback_data
     builder = InlineKeyboardBuilder()
     for inx, answer in enumerate(question_data['answers']):
         builder.row(InlineKeyboardButton(
-            text=str(inx+1),  # Только номер
-            callback_data=f"answer_{answer['is_correct']}"  # Сохраняем правильность
+            text=str(inx+1),
+            callback_data=f"answer_{question_data['question_id']}_{answer['is_correct']}"
         ))
 
     # Обработка изображения

@@ -105,7 +105,7 @@ class ZaekQuestion(models.Model):
         verbose_name = 'Вопрос'
         verbose_name_plural = 'Вопросы'
         ordering = ['-created_at']
-        unique_together = ['topic', 'name']
+        # unique_together = ['topic', 'name']
 
     def __str__(self):
         return f': {self.name[:50]}'

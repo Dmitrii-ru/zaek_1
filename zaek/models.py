@@ -69,7 +69,8 @@ class ZaekQuestion(models.Model):
         on_delete=models.CASCADE,
         related_name='questions',
         help_text='Тема вопроса',
-        null=True
+        blank=True,
+        null=True,
     )
 
     product = models.ForeignKey(

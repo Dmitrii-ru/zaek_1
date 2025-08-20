@@ -59,7 +59,7 @@ class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
 class ZaekQuestionInline(nested_admin.NestedTabularInline):
     model = ZaekQuestion
     extra = 1
-    fields = ['name', 'comment']
+    fields = ['name', 'topic']
     inlines = [ZaekAnswerInline]  # Вложенные ответы
     verbose_name = "Вопрос"
     verbose_name_plural = "Вопросы"

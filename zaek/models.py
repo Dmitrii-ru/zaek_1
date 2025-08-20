@@ -63,7 +63,7 @@ class ZaekProduct(models.Model):
         return f'{self.art} - {self.name}'
 
 class ZaekQuestion(models.Model):
-    topic = models.ForeignKey(  # Восстановлена связь с темой
+    topic = models.ForeignKey(
         ZaekTopic,
         verbose_name='Тема',
         on_delete=models.CASCADE,
@@ -72,7 +72,7 @@ class ZaekQuestion(models.Model):
         null=True
     )
 
-    product = models.ForeignKey(  # Оставлена связь с продуктом (если нужна)
+    product = models.ForeignKey(
         ZaekProduct,
         verbose_name='Связанный продукт',
         on_delete=models.SET_NULL,

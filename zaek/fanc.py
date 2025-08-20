@@ -33,7 +33,6 @@ def get_random_question_data(telegram_id):
     answered_questions = user_stats_service.get_answered_questions(telegram_id)
     answered_ids = {int(qid) for qid in answered_questions if qid.isdigit()}
     questions = list(ZaekQuestion.objects.exclude(id__in=answered_ids))
-    print(answered_ids)
     reset_occurred = False
     if not questions:
         # Если все вопросы отвечены, сбрасываем статистику
@@ -45,7 +44,7 @@ def get_random_question_data(telegram_id):
         return None
 
     number = random.randint(1, 100)
-    if number < 70:
+    if number < 85:
         question = random.choice(questions)
         answers = list(ZaekAnswer.objects.filter(question=question))
 
@@ -59,7 +58,8 @@ def get_random_question_data(telegram_id):
         if len(unique_answers) < 4:
             if question.product:
                 product_answers = ZaekAnswer.objects.filter(
-                    question__product=question.product
+                    # question__product=question.product,
+                    question__topic=question.topic
                 ).exclude(question=question)
                 for a in product_answers:
                     if a.text not in unique_answers and len(unique_answers) < 4:

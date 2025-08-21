@@ -54,6 +54,13 @@ class ZaekProduct(models.Model):
         help_text='Изображение продукта (необязательно)'
     )
 
+    image_url = models.URLField(
+        verbose_name='Ссылка на изображение',
+        blank=True,
+        null=True,
+        help_text='Ссылка на изображение продукта (если нет загруженного файла)'
+    )
+
     class Meta:
         verbose_name = 'Продукт'
         verbose_name_plural = 'Продукты'

@@ -73,7 +73,7 @@ class ZaekProductAdmin(nested_admin.NestedModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('art', 'name', 'image','topic')
+            'fields': ('art', 'name', 'image','topic','image_url')
         }),
     )
 

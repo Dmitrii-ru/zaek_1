@@ -96,24 +96,40 @@ async def zaek_question(callback: types.CallbackQuery):
         ))
 
     # Обработка изображения
-    if question_data.get('image'):
+    image_data = question_data.get('image_data')
+
+    if image_data:
         try:
-            from aiogram.types import FSInputFile
-            photo = FSInputFile(question_data['image'].path)
-            await callback.message.answer_photo(
-                photo=photo,
-                caption=question_text,
-                reply_markup=builder.as_markup(),
-                parse_mode="HTML"
-            )
+            if image_data['type'] == 'file':
+                # Отправляем файл изображения
+                from aiogram.types import FSInputFile
+                photo = FSInputFile(image_data['image'].path)
+                await callback.message.answer_photo(
+                    photo=photo,
+                    caption=question_text,
+                    reply_markup=builder.as_markup(),
+                    parse_mode="HTML"
+                )
+
+            elif image_data['type'] == 'url':
+                # Отправляем изображение по URL
+                await callback.message.answer_photo(
+                    photo=image_data['url'],
+                    caption=question_text,
+                    reply_markup=builder.as_markup(),
+                    parse_mode="HTML"
+                )
+
         except Exception as e:
             print(f"Ошибка отправки изображения: {str(e)}")
+            # Если не удалось отправить изображение, отправляем только текст
             await callback.message.answer(
                 text=question_text,
                 reply_markup=builder.as_markup(),
                 parse_mode="HTML"
             )
     else:
+        # Если нет изображения, отправляем только текст
         await callback.message.answer(
             text=question_text,
             reply_markup=builder.as_markup(),

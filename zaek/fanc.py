@@ -1,6 +1,6 @@
 from asgiref.sync import sync_to_async
 import random
-
+from django.db.models import Q
 from core.redis import user_stats_service
 from zaek.models import ZaekUser, ZaekQuestion, ZaekAnswer, ZaekProduct
 
@@ -58,7 +58,6 @@ def get_random_question_data(telegram_id):
         if len(unique_answers) < 4:
             if question.product:
                 product_answers = ZaekAnswer.objects.filter(
-                    # question__product=question.product,
                     question__topic=question.topic
                 ).exclude(question=question)
                 for a in product_answers:
@@ -78,17 +77,35 @@ def get_random_question_data(telegram_id):
         answers = list(unique_answers.values())
         random.shuffle(answers)
 
+        # Определяем данные изображения для обычного вопроса
+        image_data = None
+        if question.product:
+            # Пытаемся получить изображение из связанного продукта
+            if question.product.image:
+                image_data = {
+                    "type": "file",
+                    "image": question.product.image
+                }
+            elif question.product.image_url:
+                image_data = {
+                    "type": "url",
+                    "url": question.product.image_url
+                }
+
         return {
-            "question_id": f"question_{question.id}",  # Используем обычный ID
+            "question_id": f"question_{question.id}",
             "product": question.product.name if question.product else None,
             "question": question.name,
             "comment": question.comment,
-            "image": question.product.image if question.product else None,
+            "image_data": image_data,  # Добавляем изображение для обычных вопросов
             "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]],
             "reset_occurred": reset_occurred
         }
     else:
-        products_with_images = ZaekProduct.objects.exclude(image__isnull=True).exclude(image='')
+        products_with_images = ZaekProduct.objects.filter(
+            Q(image__isnull=False) & ~Q(image='') |
+            Q(image_url__isnull=False) & ~Q(image_url='')
+        )
         if not products_with_images.exists():
             return None
 
@@ -101,15 +118,29 @@ def get_random_question_data(telegram_id):
         answer.append(true_answer)
         random.shuffle(answer)
 
+        image_data = None
+        if random_product.image:
+            image_data = {
+                "type": "file",
+                "image": random_product.image
+            }
+        elif random_product.image_url:
+            image_data = {
+                "type": "url",
+                "url": random_product.image_url
+            }
+
         return {
-            "question_id": f"image_{random_product.id}",  # ID для вопросов с картинками
+            "question_id": f"image_{random_product.id}",
             "product": '',
             "question": "Что на фотографии?",
             "comment": '',
-            "image": random_product.image,
+            "image_data": image_data,
             "answers": answer,
             "reset_occurred": reset_occurred
         }
+
+
 
 @sync_to_async
 def update_user_stats(telegram_id, is_correct):

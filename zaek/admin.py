@@ -79,8 +79,9 @@ class ZaekProductAdmin(nested_admin.NestedModelAdmin):
 
 
 class ZaekTopicAdmin(admin.ModelAdmin):
-    list_display = ['name']
+    list_display = ['name', 'comment']
     search_fields = ['name']
+
 
 
 # Регистрация всех моделей

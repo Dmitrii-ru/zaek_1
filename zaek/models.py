@@ -10,6 +10,13 @@ class ZaekTopic(models.Model):
         help_text='Уникальное название темы (макс. 100 символов)'
     )
 
+    comment = models.TextField(
+        verbose_name='Комментарий',
+        blank=True,
+        null=True,
+        help_text='Дополнительный комментарий'
+    )
+
     class Meta:
         verbose_name = 'Тема'
         verbose_name_plural = 'Темы'

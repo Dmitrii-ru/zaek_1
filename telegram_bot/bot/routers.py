@@ -5,6 +5,8 @@ import random
 from zaek.fanc import create_or_get_zaek_user, get_random_question_data, update_user_stats
 from asgiref.sync import sync_to_async
 from core.redis import user_stats_service
+from zaek.models import ZaekQuestion
+
 zaek_routers = Router()
 
 
@@ -24,18 +26,24 @@ async def zaek_user(callback: types.CallbackQuery):
 
 @zaek_routers.callback_query(lambda c: c.data.startswith('answer_'))
 async def handle_answer(callback: types.CallbackQuery):
-    rout_pref,pref, question_id, is_correct = callback.data.split('_')
+    rout_pref, pref, question_id, is_correct = callback.data.split('_')
     is_correct = is_correct == 'True'
 
     if is_correct:
         result_text = "✅ Правильный ответ!"
-        if pref!='image':
+        if pref != 'image':
             await sync_to_async(user_stats_service.add_correct_answer)(
                 str(callback.from_user.id), question_id
             )
     else:
+        # Получаем вопрос из базы данных
+        question = await sync_to_async(ZaekQuestion.objects.select_related('topic').get)(id=question_id)
+
         result_text = "❌ Неверный ответ!"
 
+        # Проверяем наличие комментария у темы
+        if question.topic and question.topic.comment:
+            result_text += f"\n\n💡 Комментарий к теме:\n{question.topic.comment}"
 
     await update_user_stats(str(callback.from_user.id), is_correct)
 

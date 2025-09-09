@@ -155,7 +155,7 @@ def update_user_stats(telegram_id, is_correct):
 
 
 
-@sync_to_async
+
 async def safe_send_message(message, text, **kwargs):
     """Безопасная отправка сообщений с проверкой длины"""
     max_length = 4096

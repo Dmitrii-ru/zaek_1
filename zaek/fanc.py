@@ -151,3 +151,38 @@ def update_user_stats(telegram_id, is_correct):
         user.correct_attempts += 1
     user.save()
     return user
+
+
+
+
+@sync_to_async
+async def safe_send_message(message, text, **kwargs):
+    """Безопасная отправка сообщений с проверкой длины"""
+    max_length = 4096
+
+    if len(text) <= max_length:
+        await message.answer(text=text, **kwargs)
+    else:
+        # Разбиваем текст на части
+        parts = []
+        current_part = ""
+
+        for line in text.split('\n'):
+            if len(current_part) + len(line) + 1 > max_length:
+                parts.append(current_part)
+                current_part = line
+            else:
+                if current_part:
+                    current_part += '\n' + line
+                else:
+                    current_part = line
+
+        if current_part:
+            parts.append(current_part)
+
+        # Отправляем части без клавиатуры для всех кроме последней
+        for i, part in enumerate(parts):
+            if i == len(parts) - 1:
+                await message.answer(text=part, **kwargs)
+            else:
+                await message.answer(text=part, parse_mode="HTML")

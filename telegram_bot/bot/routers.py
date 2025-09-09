@@ -2,7 +2,7 @@ from aiogram import types, Router
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import random
-from zaek.fanc import create_or_get_zaek_user, get_random_question_data, update_user_stats
+from zaek.fanc import create_or_get_zaek_user, get_random_question_data, update_user_stats, safe_send_message
 from asgiref.sync import sync_to_async
 from core.redis import user_stats_service
 from zaek.models import ZaekQuestion
@@ -38,9 +38,7 @@ async def handle_answer(callback: types.CallbackQuery):
     else:
         # Получаем вопрос из базы данных
         question = await sync_to_async(ZaekQuestion.objects.select_related('topic').get)(id=question_id)
-
         result_text = "❌ Неверный ответ!"
-
         # Проверяем наличие комментария у темы
         if question.topic and question.topic.comment:
             result_text += f"\n\n💡 Комментарий к теме:\n{question.topic.comment}"
@@ -138,8 +136,9 @@ async def zaek_question(callback: types.CallbackQuery):
             )
     else:
         # Если нет изображения, отправляем только текст
-        await callback.message.answer(
-            text=question_text,
+        await safe_send_message(
+            callback.message,
+            question_text,
             reply_markup=builder.as_markup(),
             parse_mode="HTML"
         )

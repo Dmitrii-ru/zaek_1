@@ -2,7 +2,7 @@ from asgiref.sync import sync_to_async
 import random
 from django.db.models import Q
 from core.redis import user_stats_service
-from zaek.models import ZaekUser, ZaekQuestion, ZaekAnswer, ZaekProduct
+from zaek.models import ZaekUser, ZaekQuestion, ZaekAnswer, ZaekProduct, Reminder
 
 
 # Для всех синхронных функций используем sync_to_async
@@ -186,3 +186,86 @@ async def safe_send_message(message, text, **kwargs):
                 await message.answer(text=part, **kwargs)
             else:
                 await message.answer(text=part, parse_mode="HTML")
+
+# Список напоминаний
+@sync_to_async
+def get_today_reminders(id_telegram):
+    """Получает напоминания на сегодня с возможностью удаления"""
+    try:
+        user = ZaekUser.objects.get(id_telegram=id_telegram)
+        from django.utils import timezone
+        moscow_time = timezone.localtime(timezone.now())
+        today = moscow_time.date()
+
+        reminders = Reminder.objects.filter(
+            user=user,
+            created_at__date=today
+        ).order_by('-created_at')
+
+        return {
+            "success": True,
+            "reminders": list(reminders),
+            "count": len(reminders)
+        }
+    except ZaekUser.DoesNotExist:
+        return {"success": False, "error": "Пользователь не найден"}
+
+
+
+@sync_to_async
+def create_reminder(id_telegram, text):
+    """Создает новое напоминание"""
+    try:
+        user, created = ZaekUser.objects.get_or_create(id_telegram=id_telegram)
+        reminder = Reminder.objects.create(user=user, text=text)
+        return {"success": True, "reminder": reminder}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@sync_to_async
+def create_reminder(id_telegram, text):
+    """Создает новое напоминание"""
+    try:
+        user, created = ZaekUser.objects.get_or_create(id_telegram=id_telegram)
+        reminder = Reminder.objects.create(user=user, text=text)
+        return {"success": True, "reminder": reminder}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@sync_to_async
+def delete_reminder(id_telegram, reminder_id):
+    """Удаляет напоминание пользователя"""
+    try:
+        # Находим напоминание по пользователю и ID напоминания
+        reminder = Reminder.objects.get(
+            user__id_telegram=id_telegram,  # Используем __ для связи с ZaekUser
+            id=reminder_id
+        )
+        reminder_text = reminder.text
+        reminder.delete()
+        return {"success": True, "deleted_text": reminder_text}
+    except Reminder.DoesNotExist:
+        return {"success": False, "error": "Напоминание не найдено"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@sync_to_async
+def get_all_reminders(id_telegram):
+    """Получает напоминания на сегодня с возможностью удаления"""
+    try:
+        user = ZaekUser.objects.get(id_telegram=id_telegram)
+
+        reminders = Reminder.objects.filter(
+            user=user,
+        ).order_by('-created_at')
+
+        return {
+            "success": True,
+            "reminders": list(reminders),
+            "count": len(reminders)
+        }
+
+    except ZaekUser.DoesNotExist:
+        return {"success": False, "error": "Пользователь не найден"}

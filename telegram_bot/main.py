@@ -46,6 +46,7 @@ def main_menu_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Пользователь', callback_data='user')
     builder.button(text='Вопрос', callback_data='question')
+    builder.button(text='Напоминание', callback_data='today_reminders_with_input')
     builder.adjust(1)
     return builder.as_markup()
 

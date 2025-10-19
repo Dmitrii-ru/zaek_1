@@ -231,3 +231,28 @@ class ZaekUser(models.Model):
             return 0.0
         return round((self.correct_attempts / self.total_attempts) * 100, 2)
 
+
+class Reminder(models.Model):
+    user = models.ForeignKey(
+        ZaekUser,
+        on_delete=models.CASCADE,
+        related_name="user"
+    )
+
+
+    text = models.CharField(
+        verbose_name="Текст",
+        max_length=260
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name='Дата регистрации',
+        auto_now_add=True
+    )
+
+    def save(self, *args, **kwargs):
+        """Переопределяем save для гарантии использования правильного времени"""
+        from django.utils import timezone
+        if not self.id:  # только при создании
+            self.created_at = timezone.now()
+        super().save(*args, **kwargs)

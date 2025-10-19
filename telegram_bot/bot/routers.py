@@ -12,6 +12,7 @@ from zaek.models import ZaekQuestion
 
 zaek_routers = Router()
 max_show_reminders = 12
+reminder_rus = "Задачи"
 
 @zaek_routers.callback_query(lambda c: c.data == 'user')
 async def zaek_user(callback: types.CallbackQuery):
@@ -181,7 +182,12 @@ async def process_reminder_text(message: types.Message, state: FSMContext):
         return
     result = await create_reminder(str(message.from_user.id), text)
     if result["success"]:
-        await message.answer(f"✅ Напоминание создано!\n📝 {text}")
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=f"{reminder_rus} на сегодня", callback_data="today_reminders_with_input")]
+            ]
+        )
+        await message.answer(f"✅ Напоминание создано!\n📝 {text}", reply_markup=keyboard)
     else:
         await message.answer("❌ Ошибка при создании напоминания")
     await state.clear()
@@ -213,10 +219,10 @@ async def show_today_reminders_with_input(callback: types.CallbackQuery, state: 
 
 
     if not reminders:
-        text = "📝 На сегодня напоминаний нет\n\n👇 Напишите вашу первую задачу прямо здесь:"
+        text = f"📝 На сегодня {reminder_rus} нет\n\n👇 Напишите вашу первую задачу прямо здесь:"
         keyboard_buttons = []
     else:
-        text = f"📋 Напоминания на сегодня ({text_count_reminders}):\n\n"
+        text = f"📋 {reminder_rus} на сегодня ({text_count_reminders}):\n\n"
 
         keyboard_buttons = []
         current_row = []
@@ -250,7 +256,7 @@ async def show_today_reminders_with_input(callback: types.CallbackQuery, state: 
 
     # Добавляем кнопки навигации
     keyboard_buttons.extend([
-        [InlineKeyboardButton(text="Напоминание за все время", callback_data="all_reminders_with_input")]
+        [InlineKeyboardButton(text=f"{reminder_rus} за все время", callback_data="all_reminders_with_input")]
     ])
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
@@ -273,7 +279,6 @@ async def process_delete_reminder(callback: types.CallbackQuery, state: FSMConte
     if result["success"]:
         await callback.answer(f"✅ Удалена задача: {result['deleted_text']}")
         # Обновляем список - вызываем ту же функцию, что показывает список
-
         await show_all_reminders_with_input(callback)
     else:
         await callback.answer(f"❌ {result['error']}", show_alert=True)
@@ -305,7 +310,7 @@ async def show_all_reminders_with_input(callback: types.CallbackQuery):
         await callback.message.edit_text(
             text=f"❌ {result['error']}",
             reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data="reminders_menu")]]
+                inline_keyboard=[[InlineKeyboardButton(text="Задачи на сегодня", callback_data="today_reminders_with_input")]]
             )
         )
         return
@@ -319,10 +324,10 @@ async def show_all_reminders_with_input(callback: types.CallbackQuery):
         text_count_reminders = f"{max_show_reminders} из {len_rem}"
 
     if not reminders:
-        text = "📝 Напоминаний нет\n\n👇 Напишите вашу первую задачу прямо здесь:"
+        text = f"📝 {reminder_rus} нет\n\n👇 Напишите вашу первую задачу прямо здесь:"
         keyboard_buttons = []
     else:
-        text = f"📋 Напоминания  ({text_count_reminders}):\n\n"
+        text = f"📋 {reminder_rus}  ({text_count_reminders}):\n\n"
 
 
         keyboard_buttons = []
@@ -353,7 +358,7 @@ async def show_all_reminders_with_input(callback: types.CallbackQuery):
 
 
     keyboard_buttons.extend([
-        [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="menu")]
+        [InlineKeyboardButton(text=f"{reminder_rus} на сегодня", callback_data="today_reminders_with_input")]
     ])
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)

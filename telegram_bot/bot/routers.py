@@ -4,8 +4,9 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import random
-from zaek.fanc import create_or_get_zaek_user, get_random_question_data, update_user_stats, safe_send_message, \
-    create_reminder, get_today_reminders, delete_reminder, get_all_reminders
+from zaek.fanc import create_or_get_zaek_user, update_user_stats, safe_send_message, \
+    create_reminder, get_today_reminders, delete_reminder, get_all_reminders, get_categories_data, \
+    get_categories_question_data
 from asgiref.sync import sync_to_async
 from core.redis import user_stats_service
 from zaek.models import ZaekQuestion
@@ -28,12 +29,206 @@ async def zaek_user(callback: types.CallbackQuery):
     )
 
 
+@zaek_routers.callback_query(lambda c: c.data == 'categories_question')
+async def categories_question_show(callback: types.CallbackQuery):
+    categories = await get_categories_data()
+
+    print(categories)
+
+    builder = InlineKeyboardBuilder()
+    for category in categories:
+        builder.row(InlineKeyboardButton(
+            text=category['name'],
+            callback_data=f"cqsolo_{category['pk']}"
+        ))
+
+
+    await callback.message.answer(
+        text='Список категорий',
+        reply_markup=builder.as_markup(),
+        parse_mode="HTML"
+    )
+
+
+class ReminderStates(StatesGroup):
+    waiting_for_text = State()
+    waiting_for_delete = State()
 
 
 
+@zaek_routers.message(ReminderStates.waiting_for_text)
+async def process_reminder_text(message: types.Message, state: FSMContext):
+    text = message.text.strip()
+    if len(text) > 260:
+        await message.answer("❌ Текст слишком длинный (максимум 260 символов)")
+        return
+    result = await create_reminder(str(message.from_user.id), text)
+    if result["success"]:
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=f"{reminder_rus} на сегодня", callback_data="today_reminders_with_input")]
+            ]
+        )
+        await message.answer(f"✅ Напоминание создано!\n📝 {text}", reply_markup=keyboard)
+    else:
+        await message.answer("❌ Ошибка при создании напоминания")
+    await state.clear()
+
+
+
+
+@zaek_routers.callback_query(lambda c: c.data == "today_reminders_with_input")
+async def show_today_reminders_with_input(callback: types.CallbackQuery, state: FSMContext):
+    """Показывает список и сразу переходит в режим ввода"""
+    result = await get_today_reminders(str(callback.from_user.id))
+    if not result["success"]:
+        await callback.message.edit_text(
+            text=f"❌ {result['error']}",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data="reminders_menu")]]
+            )
+        )
+        return
+
+    len_rem = len(result["reminders"])
+    reminders = result["reminders"][:max_show_reminders]
+    if len_rem <= max_show_reminders:
+        text_count_reminders = f'{len_rem}'
+    else:
+        text_count_reminders = f"{max_show_reminders} из {len_rem}"
+    if not reminders:
+        text = f"📝 На сегодня {reminder_rus} нет\n\n👇 Напишите вашу первую задачу прямо здесь:"
+        keyboard_buttons = []
+    else:
+        text = f"📋 {reminder_rus} на сегодня ({text_count_reminders}):\n\n"
+        keyboard_buttons = []
+        current_row = []
+        for i, reminder in enumerate(reminders, 1):
+            from django.utils import timezone
+            time_str = timezone.localtime(reminder.created_at).strftime("%H:%M")
+            # Добавляем задачу в текст
+            text += f"{i}. {reminder.text} 🕒 {time_str}\n"
+            # Добавляем кнопку удаления
+            current_row.append(
+                InlineKeyboardButton(
+                    text=f"❌ {i}",
+                    callback_data=f"deletereminder_{reminder.id}"
+                )
+            )
+            # Каждые 3 кнопки создаем новую строку
+            if i % 4 == 0:
+                keyboard_buttons.append(current_row)
+                current_row = []
+        if current_row:
+            keyboard_buttons.append(current_row)
+    # Устанавливаем состояние для ввода
+    await state.set_state(ReminderStates.waiting_for_text)
+    await state.update_data(original_message_id=callback.message.message_id)
+    # Добавляем кнопки навигации
+    keyboard_buttons.extend([
+        [InlineKeyboardButton(text=f"{reminder_rus} за все время", callback_data="all_reminders_with_input")]
+    ])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+    if reminders:
+        text += "\n👇 Напишите новую задачу прямо здесь:"
+    if len(text) > 4096:
+        text = text[:4090] + "..."
+
+    await callback.message.edit_text(text=text, reply_markup=keyboard)
+
+
+@zaek_routers.callback_query(F.data.startswith("deletereminder_"))
+async def process_delete_reminder(callback: types.CallbackQuery, state: FSMContext):
+    """Удаляет напоминание и обновляет список"""
+    reminder_id = callback.data.split("_")[1]
+    result = await delete_reminder(str(callback.from_user.id),reminder_id)
+
+    if result["success"]:
+        await callback.answer(f"✅ Удалена задача: {result['deleted_text']}")
+        # Обновляем список - вызываем ту же функцию, что показывает список
+        await show_all_reminders_with_input(callback)
+    else:
+        await callback.answer(f"❌ {result['error']}", show_alert=True)
+
+@zaek_routers.callback_query(F.data.startswith("deletereminderall_"))
+async def process_delete_reminder(callback: types.CallbackQuery, state: FSMContext):
+    """Удаляет напоминание и обновляет список"""
+    reminder_id = callback.data.split("_")[1]
+    result = await delete_reminder(str(callback.from_user.id),reminder_id)
+
+    if result["success"]:
+        await callback.answer(f"✅ Удалена задача: {result['deleted_text']}")
+        # Обновляем список - вызываем ту же функцию, что показывает список
+
+        await show_today_reminders_with_input(callback, state)
+    else:
+        await callback.answer(f"❌ {result['error']}", show_alert=True)
+
+
+@zaek_routers.callback_query(lambda c: c.data == "all_reminders_with_input")
+async def show_all_reminders_with_input(callback: types.CallbackQuery):
+    """Показывает список и сразу переходит в режим ввода"""
+    result = await get_all_reminders(str(callback.from_user.id))
+
+    if not result["success"]:
+        await callback.message.edit_text(
+            text=f"❌ {result['error']}",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton(text="Задачи на сегодня", callback_data="today_reminders_with_input")]]
+            )
+        )
+        return
+
+    len_rem = len(result["reminders"])
+    reminders = result["reminders"][:max_show_reminders]
+    if len_rem <= max_show_reminders:
+        text_count_reminders = f'{len_rem}'
+    else:
+        text_count_reminders = f"{max_show_reminders} из {len_rem}"
+
+    if not reminders:
+        text = f"📝 {reminder_rus} нет\n\n👇 Напишите вашу первую задачу прямо здесь:"
+        keyboard_buttons = []
+    else:
+        text = f"📋 {reminder_rus}  ({text_count_reminders}):\n\n"
+
+        keyboard_buttons = []
+        current_row = []
+
+        for i, reminder in enumerate(reminders, 1):
+            from django.utils import timezone
+            time_str = timezone.localtime(reminder.created_at).strftime("%d.%m.%Y %H:%M")
+            # Добавляем задачу в текст
+            text += f"{i}. {reminder.text} 🕒 {time_str}\n"
+            # Добавляем кнопку удаления
+            current_row.append(
+                InlineKeyboardButton(
+                    text=f"❌ {i}",
+                    callback_data=f"deletereminder_{reminder.id}"
+                )
+            )
+            # Каждые 3 кнопки создаем новую строку
+            if i % 4 == 0:
+                keyboard_buttons.append(current_row)
+                current_row = []
+        if current_row:
+            keyboard_buttons.append(current_row)
+    keyboard_buttons.extend([
+        [InlineKeyboardButton(text=f"{reminder_rus} на сегодня", callback_data="today_reminders_with_input")]
+    ])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+    if len(text) > 4096:
+        text = text[:4090] + "..."
+    await callback.message.edit_text(text=text, reply_markup=keyboard)
+
+
+
+
+
+#######################################################################################################################
 @zaek_routers.callback_query(lambda c: c.data.startswith('answer_'))
 async def handle_answer(callback: types.CallbackQuery):
-    rout_pref, pref, question_id, is_correct = callback.data.split('_')
+    rout_pref, pref, question_id, is_correct, category_id = callback.data.split('_')
     is_correct = is_correct == 'True'
 
     if is_correct:
@@ -44,21 +239,23 @@ async def handle_answer(callback: types.CallbackQuery):
             )
     else:
         # Получаем вопрос из базы данных
-        question = await sync_to_async(ZaekQuestion.objects.select_related('topic').get)(id=question_id)
+        question = await  sync_to_async(ZaekQuestion.objects.select_related('product').get)(id=question_id)
         result_text = "❌ Неверный ответ!"
-        # Проверяем наличие комментария у темы
-        if question.topic and question.topic.comment:
-            result_text += f"\n\n💡 Комментарий к теме:\n{question.topic.comment}"
+        # Проверяем наличие комментария у вопроса
+        if question.product.comment:
+            result_text += f"\n\n💡 Комментарий:\n{question.product.comment}"
 
-    await update_user_stats(str(callback.from_user.id), is_correct)
+    name_telegram = callback.from_user.full_name
+    await update_user_stats(str(callback.from_user.id), is_correct,name_telegram)
 
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(
         text="Следующий вопрос",
-        callback_data="question"
+        callback_data=f"cqsolo_{category_id}"
     ))
 
-    await callback.message.answer(
+    await safe_send_message(
+        callback.message,
         result_text,
         reply_markup=builder.as_markup(),
         parse_mode="HTML"
@@ -71,11 +268,12 @@ async def handle_answer(callback: types.CallbackQuery):
 
     await callback.answer()
 
-
-@zaek_routers.callback_query(lambda c: c.data == 'question')
-async def zaek_question(callback: types.CallbackQuery):
+@zaek_routers.callback_query(F.data.startswith("cqsolo_"))
+async def zaek_categories_question(callback: types.CallbackQuery):
+    category_id = callback.data.split("_")[1]
     telegram_id = str(callback.from_user.id)
-    question_data = await get_random_question_data(telegram_id)
+    question_data = await get_categories_question_data(telegram_id, category_id)
+
 
     if not question_data:
         await callback.answer("Вопросы не найдены", show_alert=True)
@@ -83,11 +281,10 @@ async def zaek_question(callback: types.CallbackQuery):
 
     if question_data.get('reset_occurred'):
         reset_message = (
-            "🎉 Поздравляем! Вы ответили на ВСЕ вопросы верно!\n"
+            f"🎉 Поздравляем! Вы ответили на ВСЕ вопросы верно категории {question_data.get('category_name')}!\n"
             "Начинаем заново! 🚀"
         )
         await callback.message.answer(reset_message)
-
 
     # Формируем текст с нумерованными ответами
     str_answer = ""
@@ -95,8 +292,10 @@ async def zaek_question(callback: types.CallbackQuery):
         str_answer += f'{inx+1}. {answer["text"]}\n'
 
     question_text = (
-        f"<b>Продукт:</b> {question_data['product'] if question_data['product'] else ''}\n\n"
-        f"<b>Вопрос:</b> {question_data['question']}\n\n"
+        f"<b>{question_data.get('category_name')}</b>\n"
+        f"<b>Продукт:</b> {question_data['product'] if question_data['product'] else 'Не указан'}\n"
+        f"<b>Сложность:</b> {question_data['difficulty'] if question_data['difficulty'] else 'Не указана'}\n"
+        f"<b>Вопрос:</b> {question_data['question']}\n"
         f'<b>Варианты ответов:</b>\n{str_answer}'
     )
 
@@ -105,7 +304,10 @@ async def zaek_question(callback: types.CallbackQuery):
     for inx, answer in enumerate(question_data['answers']):
         builder.row(InlineKeyboardButton(
             text=str(inx+1),
-            callback_data=f"answer_{question_data['question_id']}_{answer['is_correct']}"
+            callback_data=f"answer_"
+                          f"{question_data['question_id']}_"
+                          f"{answer['is_correct']}_"
+                          f"{question_data['category_id']}"
         ))
 
     # Обработка изображения
@@ -156,215 +358,3 @@ async def zaek_question(callback: types.CallbackQuery):
         pass
 
     await callback.answer()
-
-
-class ReminderStates(StatesGroup):
-    waiting_for_text = State()
-    waiting_for_delete = State()
-
-
-
-# @zaek_routers.callback_query(lambda c: c.data == 'reminder')
-# async def zaek_reminder_list(callback: types.CallbackQuery):
-#     telegram_id = str(callback.from_user.id)
-#     reminders = await get_reminders(telegram_id)
-#     await callback.message.edit_text(
-#         text = reminders,
-#         parse_mode='HTML',  # Отключаем форматирование
-#     )
-
-
-@zaek_routers.message(ReminderStates.waiting_for_text)
-async def process_reminder_text(message: types.Message, state: FSMContext):
-    text = message.text.strip()
-    if len(text) > 260:
-        await message.answer("❌ Текст слишком длинный (максимум 260 символов)")
-        return
-    result = await create_reminder(str(message.from_user.id), text)
-    if result["success"]:
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text=f"{reminder_rus} на сегодня", callback_data="today_reminders_with_input")]
-            ]
-        )
-        await message.answer(f"✅ Напоминание создано!\n📝 {text}", reply_markup=keyboard)
-    else:
-        await message.answer("❌ Ошибка при создании напоминания")
-    await state.clear()
-
-
-
-
-@zaek_routers.callback_query(lambda c: c.data == "today_reminders_with_input")
-async def show_today_reminders_with_input(callback: types.CallbackQuery, state: FSMContext):
-    """Показывает список и сразу переходит в режим ввода"""
-    result = await get_today_reminders(str(callback.from_user.id))
-
-    if not result["success"]:
-        await callback.message.edit_text(
-            text=f"❌ {result['error']}",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data="reminders_menu")]]
-            )
-        )
-        return
-
-    len_rem = len(result["reminders"])
-
-    reminders = result["reminders"][:max_show_reminders]
-    if len_rem <= max_show_reminders:
-        text_count_reminders = f'{len_rem}'
-    else:
-        text_count_reminders = f"{max_show_reminders} из {len_rem}"
-
-
-    if not reminders:
-        text = f"📝 На сегодня {reminder_rus} нет\n\n👇 Напишите вашу первую задачу прямо здесь:"
-        keyboard_buttons = []
-    else:
-        text = f"📋 {reminder_rus} на сегодня ({text_count_reminders}):\n\n"
-
-        keyboard_buttons = []
-        current_row = []
-
-        for i, reminder in enumerate(reminders, 1):
-            from django.utils import timezone
-            time_str = timezone.localtime(reminder.created_at).strftime("%H:%M")
-
-            # Добавляем задачу в текст
-            text += f"{i}. {reminder.text} 🕒 {time_str}\n"
-
-            # Добавляем кнопку удаления
-            current_row.append(
-                InlineKeyboardButton(
-                    text=f"❌ {i}",
-                    callback_data=f"deletereminder_{reminder.id}"
-                )
-            )
-
-            # Каждые 3 кнопки создаем новую строку
-            if i % 4 == 0:
-                keyboard_buttons.append(current_row)
-                current_row = []
-
-        if current_row:
-            keyboard_buttons.append(current_row)
-
-    # Устанавливаем состояние для ввода
-    await state.set_state(ReminderStates.waiting_for_text)
-    await state.update_data(original_message_id=callback.message.message_id)
-
-    # Добавляем кнопки навигации
-    keyboard_buttons.extend([
-        [InlineKeyboardButton(text=f"{reminder_rus} за все время", callback_data="all_reminders_with_input")]
-    ])
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
-
-    if reminders:
-        text += "\n👇 Напишите новую задачу прямо здесь:"
-
-    if len(text) > 4096:
-        text = text[:4090] + "..."
-
-    await callback.message.edit_text(text=text, reply_markup=keyboard)
-
-
-@zaek_routers.callback_query(F.data.startswith("deletereminder_"))
-async def process_delete_reminder(callback: types.CallbackQuery, state: FSMContext):
-    """Удаляет напоминание и обновляет список"""
-    reminder_id = callback.data.split("_")[1]
-    result = await delete_reminder(str(callback.from_user.id),reminder_id)
-
-    if result["success"]:
-        await callback.answer(f"✅ Удалена задача: {result['deleted_text']}")
-        # Обновляем список - вызываем ту же функцию, что показывает список
-        await show_all_reminders_with_input(callback)
-    else:
-        await callback.answer(f"❌ {result['error']}", show_alert=True)
-
-
-
-@zaek_routers.callback_query(F.data.startswith("deletereminderall_"))
-async def process_delete_reminder(callback: types.CallbackQuery, state: FSMContext):
-    """Удаляет напоминание и обновляет список"""
-    reminder_id = callback.data.split("_")[1]
-    result = await delete_reminder(str(callback.from_user.id),reminder_id)
-
-    if result["success"]:
-        await callback.answer(f"✅ Удалена задача: {result['deleted_text']}")
-        # Обновляем список - вызываем ту же функцию, что показывает список
-
-        await show_today_reminders_with_input(callback, state)
-    else:
-        await callback.answer(f"❌ {result['error']}", show_alert=True)
-
-
-
-@zaek_routers.callback_query(lambda c: c.data == "all_reminders_with_input")
-async def show_all_reminders_with_input(callback: types.CallbackQuery):
-    """Показывает список и сразу переходит в режим ввода"""
-    result = await get_all_reminders(str(callback.from_user.id))
-
-    if not result["success"]:
-        await callback.message.edit_text(
-            text=f"❌ {result['error']}",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text="Задачи на сегодня", callback_data="today_reminders_with_input")]]
-            )
-        )
-        return
-
-    len_rem = len(result["reminders"])
-
-    reminders = result["reminders"][:max_show_reminders]
-    if len_rem <= max_show_reminders:
-        text_count_reminders = f'{len_rem}'
-    else:
-        text_count_reminders = f"{max_show_reminders} из {len_rem}"
-
-    if not reminders:
-        text = f"📝 {reminder_rus} нет\n\n👇 Напишите вашу первую задачу прямо здесь:"
-        keyboard_buttons = []
-    else:
-        text = f"📋 {reminder_rus}  ({text_count_reminders}):\n\n"
-
-
-        keyboard_buttons = []
-        current_row = []
-
-        for i, reminder in enumerate(reminders, 1):
-            from django.utils import timezone
-            time_str = timezone.localtime(reminder.created_at).strftime("%d.%m.%Y %H:%M")
-
-            # Добавляем задачу в текст
-            text += f"{i}. {reminder.text} 🕒 {time_str}\n"
-
-            # Добавляем кнопку удаления
-            current_row.append(
-                InlineKeyboardButton(
-                    text=f"❌ {i}",
-                    callback_data=f"deletereminder_{reminder.id}"
-                )
-            )
-
-            # Каждые 3 кнопки создаем новую строку
-            if i % 4 == 0:
-                keyboard_buttons.append(current_row)
-                current_row = []
-
-        if current_row:
-            keyboard_buttons.append(current_row)
-
-
-    keyboard_buttons.extend([
-        [InlineKeyboardButton(text=f"{reminder_rus} на сегодня", callback_data="today_reminders_with_input")]
-    ])
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
-
-
-    if len(text) > 4096:
-        text = text[:4090] + "..."
-
-    await callback.message.edit_text(text=text, reply_markup=keyboard)

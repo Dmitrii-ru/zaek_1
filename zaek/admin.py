@@ -1,38 +1,8 @@
-# from django.contrib import admin
-# import nested_admin
-# from .models import ZaekTopic, ZaekProduct, ZaekQuestion, ZaekAnswer
-#
-# class ZaekAnswerInline(nested_admin.NestedTabularInline):
-#     model = ZaekAnswer
-#     extra = 1
-#     fields = ['text', 'is_correct']
-#     verbose_name = "Ответ"
-#     verbose_name_plural = "Ответы"
-#
-# class ZaekQuestionInline(nested_admin.NestedTabularInline):
-#     model = ZaekQuestion
-#     extra = 1
-#     fields = ['name', 'topic', 'comment']
-#     inlines = [ZaekAnswerInline]  # Вложенные инлайны для ответов
-#     verbose_name = "Вопрос"
-#     verbose_name_plural = "Вопросы"
-#
-# class ZaekProductAdmin(nested_admin.NestedModelAdmin):
-#     list_display = ['art', 'name']
-#     search_fields = ['art', 'name']
-#     inlines = [ZaekQuestionInline]  # Основные инлайны для вопросов
-#
-# class ZaekTopicAdmin(admin.ModelAdmin):
-#     list_display = ['name']
-#     search_fields = ['name']
-#
-# admin.site.register(ZaekTopic, ZaekTopicAdmin)
-# admin.site.register(ZaekProduct, ZaekProductAdmin)
 
 
 from django.contrib import admin
 import nested_admin
-from .models import ZaekTopic, ZaekProduct, ZaekQuestion, ZaekAnswer
+from .models import ZaekTopic, ZaekProduct, ZaekQuestion, ZaekAnswer, TopicCategory, DifficultyLevel
 
 
 class ZaekAnswerInline(nested_admin.NestedTabularInline):
@@ -59,7 +29,7 @@ class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
 class ZaekQuestionInline(nested_admin.NestedTabularInline):
     model = ZaekQuestion
     extra = 1
-    fields = ['name', 'topic']
+    fields = ['name', 'topic','difficulty']
     inlines = [ZaekAnswerInline]  # Вложенные ответы
     verbose_name = "Вопрос"
     verbose_name_plural = "Вопросы"
@@ -67,13 +37,13 @@ class ZaekQuestionInline(nested_admin.NestedTabularInline):
 
 
 class ZaekProductAdmin(nested_admin.NestedModelAdmin):
-    list_display = ['art', 'name']
-    search_fields = ['art', 'name']
+    list_display = [ 'name']
+    search_fields = ['name']
     inlines = [ZaekQuestionInline]  # Вложенные вопросы
 
     fieldsets = (
         (None, {
-            'fields': ('art', 'name', 'image','topic','image_url')
+            'fields': ('category','name','image','image_url','comment')
         }),
     )
 
@@ -88,3 +58,5 @@ class ZaekTopicAdmin(admin.ModelAdmin):
 admin.site.register(ZaekTopic, ZaekTopicAdmin)
 admin.site.register(ZaekProduct, ZaekProductAdmin)
 admin.site.register(ZaekQuestion, ZaekQuestionAdmin)
+admin.site.register(TopicCategory)
+admin.site.register(DifficultyLevel)

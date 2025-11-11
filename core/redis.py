@@ -25,6 +25,9 @@ class UserStatsService:
         key = self.get_user_key(telegram_id)
         return self.redis.smembers(key) or set()
 
+
+
+
     def reset_user_stats(self, telegram_id):
         """Сбрасывает статистику пользователя"""
         key = self.get_user_key(telegram_id)
@@ -34,6 +37,16 @@ class UserStatsService:
         """Возвращает количество верно отвеченных вопросов"""
         key = self.get_user_key(telegram_id)
         return self.redis.scard(key)
+
+
+    def remove_category_questions(self, telegram_id, category_question_ids):
+        """Удаляет вопросы по их ID из списка верно отвеченных"""
+        if category_question_ids:
+            question_ids_str = [qid for qid in category_question_ids]
+            key = self.get_user_key(telegram_id)
+            if question_ids_str:
+                self.redis.srem(key, *question_ids_str)
+
 
 
 user_stats_service = UserStatsService()

@@ -1,5 +1,48 @@
 from django.db import models
 
+
+class DifficultyLevel(models.Model):
+    name = models.CharField(
+        verbose_name='Уровень сложности',
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True,
+    )
+
+    level = models.PositiveIntegerField(
+        verbose_name='Числовой уровень',
+        unique=True,
+        help_text='Число для сортировки (1-легкий, 2-средний, 3-сложный)'
+    )
+
+    class Meta:
+        verbose_name = 'Уровень сложности'
+        verbose_name_plural = 'Уровни сложности'
+        ordering = ['level']
+
+    def __str__(self):
+        return f'{self.name} (уровень {self.level})'
+
+
+class TopicCategory(models.Model):
+    """Тематическая категория топиков"""
+    name = models.CharField(
+        verbose_name='Название категории',
+        max_length=100,
+        unique=True,
+        help_text='Например: Программирование, Дизайн, Маркетинг'
+    )
+
+    class Meta:
+        verbose_name = 'Категория темы'
+        verbose_name_plural = 'Категории тем'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class ZaekTopic(models.Model):
     name = models.CharField(
         verbose_name='Название темы',
@@ -25,14 +68,17 @@ class ZaekTopic(models.Model):
     def __str__(self):
         return self.name
 
+
 class ZaekProduct(models.Model):
-    art = models.CharField(
-        verbose_name='Артикул',
-        max_length=100,
-        unique=True,
+
+    category = models.ForeignKey(
+        TopicCategory,
+        verbose_name='Категория',
+        on_delete=models.CASCADE,
+        related_name='products',  # ✅ Правильно: TopicCategory.products.all()
+        help_text='Категория',
         blank=False,
         null=False,
-        help_text='Уникальный артикул (макс. 100 символов)'
     )
 
     name = models.TextField(
@@ -41,16 +87,6 @@ class ZaekProduct(models.Model):
         blank=False,
         null=False,
         help_text='Уникальное название продукта'
-    )
-
-    topic = models.ForeignKey(  # Изменено на ForeignKey (один продукт - одна тема)
-        ZaekTopic,
-        verbose_name='Тема',
-        related_name='products',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        help_text='Тема, к которой относится продукт'
     )
 
     image = models.ImageField(
@@ -68,23 +104,41 @@ class ZaekProduct(models.Model):
         help_text='Ссылка на изображение продукта (если нет загруженного файла)'
     )
 
+    comment = models.TextField(
+        verbose_name='Комментарий',
+        blank=True,
+        null=True,
+        help_text='Дополнительный комментарий'
+    )
+
     class Meta:
         verbose_name = 'Продукт'
         verbose_name_plural = 'Продукты'
         ordering = ['name']
 
     def __str__(self):
-        return f'{self.art} - {self.name}'
+        return f'{self.name}'  # ✅ Теперь поле art существует
+
 
 class ZaekQuestion(models.Model):
     topic = models.ForeignKey(
         ZaekTopic,
         verbose_name='Тема',
         on_delete=models.CASCADE,
-        related_name='questions',
+        related_name='questions',  #  ZaekTopic.questions.all()
         help_text='Тема вопроса',
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
+    )
+
+    difficulty = models.ForeignKey(
+        DifficultyLevel,
+        verbose_name='Уровень сложности',
+        on_delete=models.PROTECT,
+        null=False,
+        blank=False,
+        related_name='questions',
+        help_text='Уровень сложности вопроса'
     )
 
     product = models.ForeignKey(
@@ -93,7 +147,7 @@ class ZaekQuestion(models.Model):
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name='questions',
+        related_name='questions',  # ZaekProduct.questions.all()
         help_text='Необязательная привязка к продукту'
     )
 
@@ -120,19 +174,17 @@ class ZaekQuestion(models.Model):
         verbose_name = 'Вопрос'
         verbose_name_plural = 'Вопросы'
         ordering = ['-created_at']
-        # unique_together = ['topic', 'name']
 
     def __str__(self):
-        return f': {self.name[:50]}'
+        return f'{self.name[:50]}'  # ✅ Убрал лишний символ в начале
 
-# Остальные модели (ZaekAnswer, ZaekUser) остаются без изменений
 
 class ZaekAnswer(models.Model):
     question = models.ForeignKey(
         ZaekQuestion,
         verbose_name='Вопрос',
         on_delete=models.CASCADE,
-        related_name='answers'
+        related_name='answers'  # ZaekQuestion.answers.all()
     )
 
     text = models.TextField(
@@ -161,8 +213,6 @@ class ZaekAnswer(models.Model):
     def __str__(self):
         return f'Ответ на "{self.question.name[:30]}..."'
 
-# Модель ZaekUser остаётся без изменений
-
 
 class ZaekUser(models.Model):
     id_telegram = models.CharField(
@@ -175,12 +225,11 @@ class ZaekUser(models.Model):
     )
 
     name_telegram = models.CharField(
-        verbose_name='Имя в телегам в Telegram',
+        verbose_name='Имя в Telegram',
         max_length=200,
         blank=False,
         null=False,
-        unique=True,
-        help_text='Уникальный идентификатор пользователя в Telegram'
+        help_text='Имя пользователя в Telegram'
     )
 
     total_attempts = models.PositiveIntegerField(
@@ -236,9 +285,8 @@ class Reminder(models.Model):
     user = models.ForeignKey(
         ZaekUser,
         on_delete=models.CASCADE,
-        related_name="user"
+        related_name="reminders"  # ✅ Правильно: ZaekUser.reminders.all()
     )
-
 
     text = models.CharField(
         verbose_name="Текст",
@@ -246,9 +294,17 @@ class Reminder(models.Model):
     )
 
     created_at = models.DateTimeField(
-        verbose_name='Дата регистрации',
+        verbose_name='Дата создания',
         auto_now_add=True
     )
+
+    class Meta:
+        verbose_name = 'Напоминание'
+        verbose_name_plural = 'Напоминания'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Напоминание для {self.user.name_telegram}: {self.text[:30]}'
 
     def save(self, *args, **kwargs):
         """Переопределяем save для гарантии использования правильного времени"""

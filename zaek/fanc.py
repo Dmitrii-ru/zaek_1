@@ -1,3 +1,5 @@
+from curses.ascii import isdigit
+
 from asgiref.sync import sync_to_async
 import random
 from django.db.models import Q
@@ -172,9 +174,16 @@ def get_all_reminders(id_telegram):
 #####################################################################################################
 @sync_to_async
 def get_categories_question_data(telegram_id, category_id):
+
     """Возвращает данные вопроса, исключая уже отвеченные верно"""
     answered_questions = user_stats_service.get_answered_questions(telegram_id)
     answered_ids = {int(qid) for qid in answered_questions if qid.isdigit()}
+    category_none = True
+
+    if not category_id.isdigit():
+        question = random.choice(ZaekQuestion.objects.all())
+        category_id = question.product.category.id
+        category_none = None
 
     # Получаем вопросы для категории через продукты
     questions = ZaekQuestion.objects.filter(
@@ -282,7 +291,7 @@ def get_categories_question_data(telegram_id, category_id):
 
         return {
             'difficulty': min_difficulty_level,
-            'category_id': category_id,
+            'category_id': category_id if category_none else 'None',
             "question_id": f"question_{question.id}",
             "product": question.product.name if question.product else None,
             "question": question.name,
@@ -345,7 +354,7 @@ def get_categories_question_data(telegram_id, category_id):
 
         return {
             'difficulty': min_difficulty_level,
-            'category_id': category_id,
+            'category_id': category_id if category_none else 'None',
             "question_id": f"image_{random_product.id}",
             "product": '',
             "question": "Что на фотографии?",

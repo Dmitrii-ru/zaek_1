@@ -53,16 +53,17 @@ class ZaekTopic(models.Model):
         help_text='Уникальное название темы (макс. 100 символов)'
     )
 
-    comment = models.TextField(
+    comment = models.CharField(
         verbose_name='Комментарий',
+        max_length=222,
         blank=True,
         null=True,
         help_text='Дополнительный комментарий'
     )
 
     class Meta:
-        verbose_name = 'Тема'
-        verbose_name_plural = 'Темы'
+        verbose_name = 'Тема вопроса'
+        verbose_name_plural = 'Темы вопросов'
         ordering = ['name']
 
     def __str__(self):
@@ -157,6 +158,14 @@ class ZaekQuestion(models.Model):
         null=False,
         help_text='Текст вопроса'
     )
+
+    image_url = models.URLField(
+        verbose_name='Ссылка на изображение',
+        blank=True,
+        null=True,
+        help_text='Ссылка на изображение продукта'
+    )
+
 
     comment = models.TextField(
         verbose_name='Комментарий',

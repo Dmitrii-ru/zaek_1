@@ -29,11 +29,11 @@ class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
 class ZaekQuestionInline(nested_admin.NestedTabularInline):
     model = ZaekQuestion
     extra = 1
-    fields = ['name', 'topic','difficulty']
-    inlines = [ZaekAnswerInline]  # Вложенные ответы
+    fields = ['name', 'topic', 'difficulty', 'image_url']
+    inlines = [ZaekAnswerInline]
     verbose_name = "Вопрос"
     verbose_name_plural = "Вопросы"
-    show_change_link = True  # Добавляет ссылку на отдельное редактирование
+    show_change_link = True
 
 
 class ZaekProductAdmin(nested_admin.NestedModelAdmin):

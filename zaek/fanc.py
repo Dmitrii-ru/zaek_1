@@ -253,18 +253,32 @@ def get_categories_question_data(telegram_id, category_id):
 
         # Определяем данные изображения для обычного вопроса
         image_data = None
+
+
         if question.product:
             # Пытаемся получить изображение из связанного продукта
-            if question.product.image:
+
+
+
+            if question.image_url:
+                image_data = {
+                    "type": "url",
+                    "url": question.image_url
+                }
+
+            elif question.product.image:
                 image_data = {
                     "type": "file",
                     "image": question.product.image
                 }
+
             elif question.product.image_url:
                 image_data = {
                     "type": "url",
                     "url": question.product.image_url
                 }
+
+
 
         return {
             'difficulty': min_difficulty_level,

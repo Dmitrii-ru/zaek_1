@@ -14,7 +14,7 @@ class ZaekAnswerInline(nested_admin.NestedTabularInline):
 
 
 class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
-    list_display = ['name',  'product']
+    list_display = ['name',  'product','difficulty']
     list_filter = ['product']
     search_fields = ['name']
     inlines = [ZaekAnswerInline]  # Вложенные ответы

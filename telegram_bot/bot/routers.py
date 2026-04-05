@@ -239,19 +239,23 @@ async def handle_answer(callback: types.CallbackQuery):
             )
     else:
         # Получаем вопрос из базы данных
-        question = await  sync_to_async(ZaekQuestion.objects.select_related('product').get)(id=question_id)
+        question = await sync_to_async(ZaekQuestion.objects.select_related('product').get)(id=question_id)
         result_text = "❌ Неверный ответ!"
         # Проверяем наличие комментария у вопроса
-        if question.product.comment:
-            result_text += f"\n\n💡 Комментарий:\n{question.product.comment}"
+        if question.comment:  # Исправлено: было question.product.comment
+            result_text += f"\n\n💡 Комментарий:\n{question.comment}"
 
     name_telegram = callback.from_user.full_name
-    await update_user_stats(str(callback.from_user.id), is_correct,name_telegram)
+    await update_user_stats(str(callback.from_user.id), is_correct, name_telegram)
 
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(
         text="Следующий вопрос",
         callback_data=f"cqsolo_{category_id}"
+    ))
+    builder.row(InlineKeyboardButton(
+        text="Выбрать другую категорию",
+        callback_data="categories_question"
     ))
 
     await safe_send_message(
@@ -268,15 +272,50 @@ async def handle_answer(callback: types.CallbackQuery):
 
     await callback.answer()
 
+
 @zaek_routers.callback_query(F.data.startswith("cqsolo_"))
 async def zaek_categories_question(callback: types.CallbackQuery):
     category_id = callback.data.split("_")[1]
     telegram_id = str(callback.from_user.id)
     question_data = await get_categories_question_data(telegram_id, category_id)
+    print(category_id)
 
 
     if not question_data:
         await callback.answer("Вопросы не найдены", show_alert=True)
+        return
+
+    # Проверяем, все ли вопросы в категории отвечены
+    if question_data.get('all_questions_answered'):
+        category_name = question_data.get('category_name', 'этой категории')
+
+        builder = InlineKeyboardBuilder()
+        builder.row(InlineKeyboardButton(
+            text="🎉 Начать заново",
+            callback_data=f"reset_category_{category_id}"
+        ))
+        builder.row(InlineKeyboardButton(
+            text="📚 Выбрать другую категорию",
+            callback_data="categories_question"
+        ))
+
+        congrat_text = (
+            f"🎉 Поздравляем! Вы ответили на ВСЕ вопросы категории \"{category_name}\"!\n\n"
+            "Вы можете начать эту категорию заново или выбрать другую категорию."
+        )
+
+        await callback.message.answer(
+            text=congrat_text,
+            reply_markup=builder.as_markup(),
+            parse_mode="HTML"
+        )
+
+        try:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except:
+            pass
+
+        await callback.answer()
         return
 
     if question_data.get('reset_occurred'):
@@ -285,7 +324,6 @@ async def zaek_categories_question(callback: types.CallbackQuery):
             "Начинаем заново! 🚀"
         )
         await callback.message.answer(reset_message)
-
     # Формируем текст с нумерованными ответами
     str_answer = ""
     for inx, answer in enumerate(question_data['answers']):
@@ -358,3 +396,21 @@ async def zaek_categories_question(callback: types.CallbackQuery):
         pass
 
     await callback.answer()
+
+
+@zaek_routers.callback_query(F.data.startswith("reset_category_"))
+async def reset_category_questions(callback: types.CallbackQuery):
+    """Сбрасывает статистику по категории и начинает заново"""
+    category_id = callback.data.split("_")[2]
+    telegram_id = str(callback.from_user.id)
+
+    print(category_id,'reset_category_questions')
+    # Сбрасываем статистику для этой категории
+    category_question_ids = await sync_to_async(list)(
+        ZaekQuestion.objects.filter(
+            product__category_id=category_id
+        ).values_list('id', flat=True)
+    )
+    await sync_to_async(user_stats_service.remove_category_questions)(telegram_id, category_question_ids)
+    # Показываем первый вопрос категории
+    await zaek_categories_question(callback)

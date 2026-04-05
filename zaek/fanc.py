@@ -174,7 +174,6 @@ def get_all_reminders(id_telegram):
 #####################################################################################################
 @sync_to_async
 def get_categories_question_data(telegram_id, category_id):
-
     """Возвращает данные вопроса, исключая уже отвеченные верно"""
     answered_questions = user_stats_service.get_answered_questions(telegram_id)
     answered_ids = {int(qid) for qid in answered_questions if qid.isdigit()}
@@ -196,9 +195,9 @@ def get_categories_question_data(telegram_id, category_id):
         'difficulty_level',
     )
 
-    # Инициализируем переменную
     min_difficulty_level = None
     reset_occurred = False
+    all_questions_answered = False  # Новый флаг
 
     # Получаем первый вопрос для определения минимального уровня сложности
     if questions.exists():
@@ -210,29 +209,42 @@ def get_categories_question_data(telegram_id, category_id):
         questions = []
 
     if not questions:
-        # Если все вопросы отвечены, сбрасываем статистику
+        # Если все вопросы отвечены, устанавливаем флаг
         category_question_ids = ZaekQuestion.objects.filter(
             product__category_id=category_id
         ).values_list('id', flat=True)
-        user_stats_service.remove_category_questions(telegram_id, category_question_ids)
-        questions = list(ZaekQuestion.objects.filter(product__category_id=category_id))
-        reset_occurred = True
 
-        # После сброса снова определяем минимальный уровень сложности
-        if questions:
-            questions_with_difficulty = ZaekQuestion.objects.filter(
-                product__category_id=category_id
-            ).annotate(
-                difficulty_level=F('difficulty__level')
-            ).order_by('difficulty_level')
+        # Проверяем, действительно ли все вопросы категории отвечены
+        if answered_ids.issuperset(set(category_question_ids)):
+            all_questions_answered = True
+            return {
+                'all_questions_answered': True,
+                'category_name': TopicCategory.objects.get(id=category_id).name,
+                'category_id': category_id
+            }
+        else:
+            # Если не все вопросы отвечены, но фильтрация дала пустой результат,
+            # сбрасываем статистику для этой категории
+            user_stats_service.remove_category_questions(telegram_id, category_question_ids)
+            questions = list(ZaekQuestion.objects.filter(product__category_id=category_id))
+            reset_occurred = True
 
-            if questions_with_difficulty.exists():
-                min_difficulty_level = questions_with_difficulty.first().difficulty_level
-                questions = [obj for obj in questions_with_difficulty if obj.difficulty_level == min_difficulty_level]
+            # После сброса снова определяем минимальный уровень сложности
+            if questions:
+                questions_with_difficulty = ZaekQuestion.objects.filter(
+                    product__category_id=category_id
+                ).annotate(
+                    difficulty_level=F('difficulty__level')
+                ).order_by('difficulty_level')
+
+                if questions_with_difficulty.exists():
+                    min_difficulty_level = questions_with_difficulty.first().difficulty_level
+                    questions = [obj for obj in questions_with_difficulty if obj.difficulty_level == min_difficulty_level]
 
     if not questions:
         return None
 
+    # Остальная логика формирования вопроса остается без изменений
     number = random.randint(1, 100)
     if number < 100:  # Обычные вопросы
         question = random.choice(questions)
@@ -263,35 +275,26 @@ def get_categories_question_data(telegram_id, category_id):
         # Определяем данные изображения для обычного вопроса
         image_data = None
 
-
         if question.product:
-            # Пытаемся получить изображение из связанного продукта
-
-
-
             if question.image_url:
                 image_data = {
                     "type": "url",
                     "url": question.image_url
                 }
-
             elif question.product.image:
                 image_data = {
                     "type": "file",
                     "image": question.product.image
                 }
-
             elif question.product.image_url:
                 image_data = {
                     "type": "url",
                     "url": question.product.image_url
                 }
 
-
-
         return {
             'difficulty': min_difficulty_level,
-            'category_id': category_id if category_none else 'None',
+            'category_id': category_id ,
             "question_id": f"question_{question.id}",
             "product": question.product.name if question.product else None,
             "question": question.name,
@@ -299,8 +302,14 @@ def get_categories_question_data(telegram_id, category_id):
             "image_data": image_data,
             "answers": [{"text": a.text, "is_correct": a.is_correct} for a in answers[:4]],
             "reset_occurred": reset_occurred,
-            "category_name": question.product.category.name if question.product else "Общая"
+            "category_name": question.product.category.name if question.product else "Общая",
+            "all_questions_answered": False
         }
+
+
+
+
+
     else:  # Вопросы с изображением
         # Для вопросов с изображением также определяем уровень сложности
         if min_difficulty_level is None:

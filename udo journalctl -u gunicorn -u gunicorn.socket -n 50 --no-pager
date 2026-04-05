@@ -1,0 +1,21 @@
+[0;1;31mUnit gunicorn.socket could not be found.[0m
+[0;1;32m●[0m gunicorn.service - gunicorn daemon
+     Loaded: loaded (]8;;file://tpqvssytah/etc/systemd/system/gunicorn.service/etc/systemd/system/gunicorn.service]8;;; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;32mactive (running)[0m since Tue 2025-08-12 18:16:32 UTC; 24s ago
+   Main PID: 1864 (gunicorn)
+      Tasks: 4 (limit: 1110)
+     Memory: 94.4M (peak: 94.4M)
+        CPU: 690ms
+     CGroup: /system.slice/gunicorn.service
+             ├─[0;38;5;245m1864 /var/www/zaek_1/venv_z/bin/python3.12 /var/www/zaek_1/venv_z/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 --timeout 60 --access-logfile - --error-logfile - core.wsgi:application[0m
+             ├─[0;38;5;245m1877 /var/www/zaek_1/venv_z/bin/python3.12 /var/www/zaek_1/venv_z/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 --timeout 60 --access-logfile - --error-logfile - core.wsgi:application[0m
+             ├─[0;38;5;245m1878 /var/www/zaek_1/venv_z/bin/python3.12 /var/www/zaek_1/venv_z/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 --timeout 60 --access-logfile - --error-logfile - core.wsgi:application[0m
+             └─[0;38;5;245m1879 /var/www/zaek_1/venv_z/bin/python3.12 /var/www/zaek_1/venv_z/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 --timeout 60 --access-logfile - --error-logfile - core.wsgi:application[0m
+
+Aug 12 18:16:32 tpqvssytah systemd[1]: Started gunicorn.service - gunicorn daemon.
+Aug 12 18:16:32 tpqvssytah gunicorn[1864]: [2025-08-12 18:16:32 +0000] [1864] [INFO] Starting gunicorn 23.0.0
+Aug 12 18:16:32 tpqvssytah gunicorn[1864]: [2025-08-12 18:16:32 +0000] [1864] [INFO] Listening at: http://127.0.0.1:8000 (1864)
+Aug 12 18:16:32 tpqvssytah gunicorn[1864]: [2025-08-12 18:16:32 +0000] [1864] [INFO] Using worker: sync
+Aug 12 18:16:32 tpqvssytah gunicorn[1877]: [2025-08-12 18:16:32 +0000] [1877] [INFO] Booting worker with pid: 1877
+Aug 12 18:16:32 tpqvssytah gunicorn[1878]: [2025-08-12 18:16:32 +0000] [1878] [INFO] Booting worker with pid: 1878
+Aug 12 18:16:32 tpqvssytah gunicorn[1879]: [2025-08-12 18:16:32 +0000] [1879] [INFO] Booting worker with pid: 1879

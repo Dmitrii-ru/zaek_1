@@ -21,7 +21,7 @@ class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('name',  'product', 'comment')
+            'fields': ('name',  'product', 'comment','difficulty')
         }),
     )
 

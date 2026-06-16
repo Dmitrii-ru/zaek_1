@@ -174,9 +174,16 @@ def get_all_reminders(id_telegram):
 #####################################################################################################
 @sync_to_async
 def get_categories_question_data(telegram_id, category_id):
-    """Возвращает данные вопроса, исключая уже отвеченные верно"""
+    """Получает вопрос, исключая отвеченные и заблокированные"""
     answered_questions = user_stats_service.get_answered_questions(telegram_id)
+    blocked_questions = user_stats_service.get_blocked_questions(telegram_id)  # ДОБАВЛЯЕМ
+
     answered_ids = {int(qid) for qid in answered_questions if qid.isdigit()}
+    blocked_ids = {int(qid) for qid in blocked_questions if qid.isdigit()}  # ДОБАВЛЯЕМ
+
+    # Исключаем и отвеченные, и заблокированные вопросы
+    excluded_ids = answered_ids.union(blocked_ids)  # МЕНЯЕМ
+
     category_none = True
 
     if not category_id.isdigit():
@@ -184,11 +191,11 @@ def get_categories_question_data(telegram_id, category_id):
         category_id = question.product.category.id
         category_none = None
 
-    # Получаем вопросы для категории через продукты
+    # МЕНЯЕМ ЗАПРОС - исключаем все (отвеченные и заблокированные)
     questions = ZaekQuestion.objects.filter(
         product__category_id=category_id
     ).exclude(
-        id__in=answered_ids
+        id__in=excluded_ids  # МЕНЯЕМ
     ).annotate(
         difficulty_level=F('difficulty__level')
     ).order_by(
@@ -197,25 +204,22 @@ def get_categories_question_data(telegram_id, category_id):
 
     min_difficulty_level = None
     reset_occurred = False
-    all_questions_answered = False  # Новый флаг
+    all_questions_answered = False
 
-    # Получаем первый вопрос для определения минимального уровня сложности
     if questions.exists():
         first_question = questions.first()
         min_difficulty_level = first_question.difficulty_level
-        # Берем все вопросы с минимальным уровнем сложности
         questions = [obj for obj in questions if obj.difficulty_level == min_difficulty_level]
     else:
         questions = []
 
     if not questions:
-        # Если все вопросы отвечены, устанавливаем флаг
         category_question_ids = ZaekQuestion.objects.filter(
             product__category_id=category_id
         ).values_list('id', flat=True)
 
-        # Проверяем, действительно ли все вопросы категории отвечены
-        if answered_ids.issuperset(set(category_question_ids)):
+        # МЕНЯЕМ ПРОВЕРКУ - проверяем все ли вопросы отвечены ИЛИ заблокированы
+        if excluded_ids.issuperset(set(category_question_ids)):
             all_questions_answered = True
             return {
                 'all_questions_answered': True,
@@ -223,13 +227,13 @@ def get_categories_question_data(telegram_id, category_id):
                 'category_id': category_id
             }
         else:
-            # Если не все вопросы отвечены, но фильтрация дала пустой результат,
-            # сбрасываем статистику для этой категории
-            user_stats_service.remove_category_questions(telegram_id, category_question_ids)
+            # Сбрасываем только отвеченные вопросы, заблокированные не трогаем
+            only_answered_ids = answered_ids - blocked_ids  # ДОБАВЛЯЕМ
+            user_stats_service.remove_category_questions(telegram_id, only_answered_ids)  # МЕНЯЕМ
+
             questions = list(ZaekQuestion.objects.filter(product__category_id=category_id))
             reset_occurred = True
 
-            # После сброса снова определяем минимальный уровень сложности
             if questions:
                 questions_with_difficulty = ZaekQuestion.objects.filter(
                     product__category_id=category_id
@@ -239,11 +243,11 @@ def get_categories_question_data(telegram_id, category_id):
 
                 if questions_with_difficulty.exists():
                     min_difficulty_level = questions_with_difficulty.first().difficulty_level
-                    questions = [obj for obj in questions_with_difficulty if obj.difficulty_level == min_difficulty_level]
+                    questions = [obj for obj in questions_with_difficulty if
+                                 obj.difficulty_level == min_difficulty_level]
 
     if not questions:
         return None
-
     # Остальная логика формирования вопроса остается без изменений
     number = random.randint(1, 100)
     if number < 100:  # Обычные вопросы
@@ -373,3 +377,77 @@ def get_categories_question_data(telegram_id, category_id):
             "reset_occurred": reset_occurred,
             "category_name": random_product.category.name
         }
+
+
+
+@sync_to_async
+def block_question_for_user(telegram_id, question_id_str):
+    """Блокирует вопрос для пользователя на месяц"""
+    try:
+        # Теперь question_id_str приходит просто как "123"
+        # Проверяем, что это число
+        if not question_id_str.isdigit():
+            return {
+                "success": False,
+                "error": "Неверный формат ID вопроса"
+            }
+
+        question_id = int(question_id_str)
+        question = ZaekQuestion.objects.filter(id=question_id).first()
+
+        if not question:
+            return {"success": False, "error": "Вопрос не найден"}
+
+        block_until = user_stats_service.block_question_for_month(telegram_id, question_id)
+
+        from datetime import datetime
+        days_left = (block_until - datetime.now()).days
+
+        return {
+            "success": True,
+            "question_text": question.name[:50],
+            "blocked_until": block_until.strftime("%d.%m.%Y"),
+            "days": days_left
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@sync_to_async
+def unblock_all_questions_for_user(telegram_id):
+    """Снимает все блокировки для пользователя"""
+    try:
+        count = user_stats_service.unblock_all_questions(telegram_id)
+        return {
+            "success": True,
+            "unblocked_count": count
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@sync_to_async
+def get_blocked_questions_info(telegram_id):
+    """Получает информацию о заблокированных вопросах пользователя"""
+    blocked_with_expiry = user_stats_service.get_blocked_with_expiry(telegram_id)
+
+    result = []
+    from datetime import datetime
+
+    for qid_str, timestamp in blocked_with_expiry.items():
+        try:
+            qid = int(qid_str)
+            question = ZaekQuestion.objects.filter(id=qid).first()
+            if question:
+                block_until = datetime.fromtimestamp(int(timestamp))
+                days_left = (block_until - datetime.now()).days
+                result.append({
+                    "question_id": qid,
+                    "question_text": question.name[:50],
+                    "blocked_until": block_until.strftime("%d.%m.%Y"),
+                    "days_left": days_left
+                })
+        except (ValueError, TypeError):
+            continue
+
+    return result

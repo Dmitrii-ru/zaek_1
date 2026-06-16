@@ -23,8 +23,7 @@ def init_django():
 init_django()
 
 from telegram_bot.settings import BOT_TOKEN
-from .bot.routers import (zaek_routers)
-
+from telegram_bot.bot.routers import zaek_routers
 BOT_TOKEN = BOT_TOKEN
 
 bot = Bot(

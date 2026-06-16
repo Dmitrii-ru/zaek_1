@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import random
 from zaek.fanc import create_or_get_zaek_user, update_user_stats, safe_send_message, \
     create_reminder, get_today_reminders, delete_reminder, get_all_reminders, get_categories_data, \
-    get_categories_question_data
+    get_categories_question_data, block_question_for_user, unblock_all_questions_for_user
 from asgiref.sync import sync_to_async
 from core.redis import user_stats_service
 from zaek.models import ZaekQuestion
@@ -22,10 +22,17 @@ async def zaek_user(callback: types.CallbackQuery):
     # Добавляем await перед вызовом асинхронной функции
     user = await create_or_get_zaek_user(telegram_id, name_telegram)
 
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔓 Снять все блокировки", callback_data="unblock_all")],
+
+    ])
+
+
     await callback.message.edit_text(
         f"{user.get('name_telegram', 'Товарищ')}\n"
         f"Количество попыток: {user['total_attempts']}\n"
-        f"Количество верных попыток: {user['correct_attempts']}"
+        f"Количество верных попыток: {user['correct_attempts']}",
+        reply_markup=keyboard
     )
 
 
@@ -299,6 +306,7 @@ async def zaek_categories_question(callback: types.CallbackQuery):
             callback_data="categories_question"
         ))
 
+
         congrat_text = (
             f"🎉 Поздравляем! Вы ответили на ВСЕ вопросы категории \"{category_name}\"!\n\n"
             "Вы можете начать эту категорию заново или выбрать другую категорию."
@@ -349,6 +357,12 @@ async def zaek_categories_question(callback: types.CallbackQuery):
         ))
 
     # Обработка изображения
+
+    question_id_num = question_data['question_id'].split("_")[1]  # "question_123" -> "123"
+    builder.row(InlineKeyboardButton(
+        text="❌ Не показывать месяц",
+        callback_data=f"block_{question_id_num}"
+    ))
     image_data = question_data.get('image_data')
 
     if image_data:
@@ -414,3 +428,50 @@ async def reset_category_questions(callback: types.CallbackQuery):
     await sync_to_async(user_stats_service.remove_category_questions)(telegram_id, category_question_ids)
     # Показываем первый вопрос категории
     await zaek_categories_question(callback)
+
+
+@zaek_routers.callback_query(lambda c: c.data and c.data.startswith("block_"))
+async def handle_block_question(callback: types.CallbackQuery):
+    """Обработчик кнопки 'Не показывать месяц'"""
+    telegram_id = str(callback.from_user.id)
+
+    # Получаем ID вопроса (приходит в формате "block_123")
+    # Просто берем все что после "block_"
+    question_id = callback.data.split("_", 1)[1]  # Получаем "123"
+
+    # Блокируем вопрос
+    result = await block_question_for_user(telegram_id, question_id)
+
+    if result["success"]:
+        await callback.answer(
+            f"✅ Вопрос «{result['question_text']}…» не будет показываться {result['days']} дней (до {result['blocked_until']})",
+            show_alert=True
+        )
+        # Удаляем сообщение с вопросом
+        await callback.message.delete()
+    else:
+        await callback.answer(
+            f"❌ Ошибка: {result['error']}",
+            show_alert=True
+        )
+
+
+@zaek_routers.callback_query(lambda c: c.data == "unblock_all")
+async def handle_unblock_all(callback: types.CallbackQuery):
+    """Обработчик кнопки 'Снять все блокировки'"""
+    telegram_id = str(callback.from_user.id)
+
+    result = await unblock_all_questions_for_user(telegram_id)
+
+    if result["success"]:
+        await callback.answer(
+            f"✅ Снято {result['unblocked_count']} блокировок!",
+            show_alert=True
+        )
+        # Возвращаемся в меню пользователя
+        await zaek_user(callback)
+    else:
+        await callback.answer(
+            f"❌ Ошибка: {result['error']}",
+            show_alert=True
+        )

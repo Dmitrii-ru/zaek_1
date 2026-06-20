@@ -39,6 +39,7 @@
             border-radius: 5px;
             font-family: monospace;
             font-size: 14px;
+            min-height: 200px;
         }
         button {
             background: #007bff;
@@ -78,6 +79,13 @@
             margin-top: 0;
             color: #333;
         }
+        .question.error-question {
+            border-left: 4px solid #dc3545 !important;
+            background: #fff5f5 !important;
+        }
+        .question.error-question .type-label {
+            background: #dc3545 !important;
+        }
         .choices {
             margin: 10px 0;
             padding-left: 20px;
@@ -95,6 +103,16 @@
             background: #f8d7da;
             border-left: 3px solid #dc3545;
         }
+        .choice.matching {
+            background: #e9ecef;
+            border-left: 3px solid #17a2b8;
+            padding: 8px 10px;
+        }
+        .choice.numeric {
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            padding: 8px 10px;
+        }
         .badge {
             display: inline-block;
             padding: 3px 10px;
@@ -111,12 +129,24 @@
             background: #17a2b8;
             color: white;
         }
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
         .error {
             background: #f8d7da;
             color: #721c24;
             padding: 15px;
             border-radius: 5px;
             border: 1px solid #f5c6cb;
+            margin-bottom: 15px;
+        }
+        .error ul {
+            margin: 5px 0 0 20px;
         }
         .stats {
             background: #e9ecef;
@@ -127,6 +157,9 @@
         .stats span {
             font-weight: bold;
             color: #007bff;
+        }
+        .stats .warning {
+            color: #856404;
         }
         .answer {
             margin-top: 10px;
@@ -146,6 +179,24 @@
             border-radius: 3px;
             font-size: 12px;
             margin-bottom: 10px;
+        }
+        .type-label.matching-label {
+            background: #17a2b8;
+        }
+        .type-label.numeric-label {
+            background: #ffc107;
+            color: #333;
+        }
+        .numeric-answer {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ffc107;
+        }
+        .numeric-answer code {
+            font-size: 18px;
+            font-weight: bold;
+            color: #856404;
         }
     </style>
 </head>
@@ -172,10 +223,35 @@
                 <hr>
                 <h2>📊 Результаты обработки</h2>
 
+                {% if result.errors %}
+                    <div class="error" style="margin-bottom: 20px;">
+                        <h3>⚠️ Обнаружены ошибки при обработке:</h3>
+                        <ul>
+                            {% for error in result.errors %}
+                                <li>
+                                    {% if error.group %}
+                                        <strong>Группа: {{ error.group }}</strong>
+                                    {% endif %}
+                                    {% if error.question_index %}
+                                        , Вопрос #{{ error.question_index }}
+                                    {% endif %}
+                                    : {{ error.error }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        {% if result.partial_success %}
+                            <p style="color: #856404; margin-top: 10px;">ℹ️ Остальные вопросы были обработаны успешно.</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
                 {% if result.success %}
                     <div class="stats">
                         <p>📌 Найдено групп: <span>{{ result.groups|length }}</span></p>
-                        <p>📝 Всего вопросов: <span>{{ result.total_questions }}</span></p>
+                        <p>📝 Успешно обработано вопросов: <span>{{ result.total_questions }}</span></p>
+                        {% if result.errors %}
+                            <p style="color: #856404;">⚠️ С ошибками: <span class="warning">{{ result.errors|length }}</span></p>
+                        {% endif %}
                     </div>
 
                     {% for group in result.groups %}
@@ -184,22 +260,54 @@
                             <p>Вопросов: {{ group.questions|length }}</p>
 
                             {% for question in group.questions %}
-                                <div class="question">
+                                <div class="question {% if question.error %}error-question{% endif %}">
                                     <h3>❓ {{ forloop.counter }}. {{ question.text }}</h3>
-                                    <span class="type-label">{{ question.type }}</span>
+                                    <span class="type-label {% if question.is_matching %}matching-label{% elif question.is_numeric %}numeric-label{% endif %}">{{ question.type }}</span>
 
-                                    <div class="choices">
-                                        {% for choice in question.choices %}
-                                            <div class="choice {% if choice.is_correct %}correct{% else %}incorrect{% endif %}">
-                                                {% if choice.is_correct %}✅{% else %}❌{% endif %} {{ choice.text }}
-                                                {% if choice.is_correct %}
-                                                    <span class="badge badge-success">Правильный</span>
-                                                {% endif %}
+                                    {% if question.error %}
+                                        <div class="error" style="margin-top: 10px;">
+                                            <p>{{ question.correct_answers.0 }}</p>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if question.is_numeric %}
+                                        <!-- Числовой вопрос -->
+                                        <div class="choices">
+                                            <p style="color: #6c757d; font-style: italic;">🔢 Введите числовой ответ</p>
+                                            <div class="numeric-answer">
+                                                <strong>✅ Правильный ответ:</strong> <code>{{ question.correct_answers.0 }}</code>
                                             </div>
-                                        {% endfor %}
-                                    </div>
+                                        </div>
+                                    {% elif question.is_matching %}
+                                        <!-- Вопрос на сопоставление -->
+                                        <div class="choices">
+                                            <p style="color: #6c757d; font-style: italic; margin-bottom: 10px;">🔗 Сопоставьте элементы:</p>
+                                            {% for choice in question.choices %}
+                                                <div class="choice matching">
+                                                    {{ choice.text }}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% elif question.has_choices %}
+                                        <!-- Обычные вопросы с вариантами -->
+                                        <div class="choices">
+                                            {% for choice in question.choices %}
+                                                <div class="choice {% if choice.is_correct %}correct{% else %}incorrect{% endif %}">
+                                                    {% if choice.is_correct %}✅{% else %}❌{% endif %} {{ choice.text }}
+                                                    {% if choice.is_correct %}
+                                                        <span class="badge badge-success">Правильный</span>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <!-- Вопросы без вариантов -->
+                                        <div class="choices">
+                                            <p style="color: #6c757d; font-style: italic;">📝 Вопрос без вариантов ответа</p>
+                                        </div>
+                                    {% endif %}
 
-                                    {% if question.correct_answers %}
+                                    {% if question.correct_answers and not question.error and not question.is_numeric %}
                                         <div class="answer">
                                             <strong>🎯 Правильный ответ:</strong>
                                             {% if question.correct_answers|length == 1 %}
@@ -222,6 +330,14 @@
                     <div class="error">
                         <h3>❌ Ошибка обработки</h3>
                         <p>{{ result.error }}</p>
+                        {% if result.errors %}
+                            <h4>Детали ошибок:</h4>
+                            <ul>
+                                {% for error in result.errors %}
+                                    <li>{{ error.error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>

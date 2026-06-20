@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Декодер викторины</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .group h2 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .question {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .question h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .choices {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .choice {
+            padding: 5px 10px;
+            margin: 3px 0;
+            border-radius: 3px;
+        }
+        .choice.correct {
+            background: #d4edda;
+            border-left: 3px solid #28a745;
+        }
+        .choice.incorrect {
+            background: #f8d7da;
+            border-left: 3px solid #dc3545;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+        }
+        .stats {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .stats span {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .answer {
+            margin-top: 10px;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 5px;
+            border: 1px solid #c3e6cb;
+        }
+        .answer strong {
+            color: #155724;
+        }
+        .type-label {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #6c757d;
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Декодер викторины iSpring</h1>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="{{ form.pres_info.id_for_label }}">{{ form.pres_info.label }}</label>
+                {{ form.pres_info }}
+                {% if form.pres_info.errors %}
+                    <div class="error" style="margin-top: 10px;">
+                        {{ form.pres_info.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            <button type="submit">📊 Обработать викторину</button>
+        </form>
+
+        {% if result %}
+            <div class="results">
+                <hr>
+                <h2>📊 Результаты обработки</h2>
+
+                {% if result.success %}
+                    <div class="stats">
+                        <p>📌 Найдено групп: <span>{{ result.groups|length }}</span></p>
+                        <p>📝 Всего вопросов: <span>{{ result.total_questions }}</span></p>
+                    </div>
+
+                    {% for group in result.groups %}
+                        <div class="group">
+                            <h2>📁 {{ group.name }}</h2>
+                            <p>Вопросов: {{ group.questions|length }}</p>
+
+                            {% for question in group.questions %}
+                                <div class="question">
+                                    <h3>❓ {{ forloop.counter }}. {{ question.text }}</h3>
+                                    <span class="type-label">{{ question.type }}</span>
+
+                                    <div class="choices">
+                                        {% for choice in question.choices %}
+                                            <div class="choice {% if choice.is_correct %}correct{% else %}incorrect{% endif %}">
+                                                {% if choice.is_correct %}✅{% else %}❌{% endif %} {{ choice.text }}
+                                                {% if choice.is_correct %}
+                                                    <span class="badge badge-success">Правильный</span>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+
+                                    {% if question.correct_answers %}
+                                        <div class="answer">
+                                            <strong>🎯 Правильный ответ:</strong>
+                                            {% if question.correct_answers|length == 1 %}
+                                                {{ question.correct_answers.0 }}
+                                            {% else %}
+                                                <ul style="margin: 5px 0 0 20px;">
+                                                    {% for answer in question.correct_answers %}
+                                                        <li>{{ answer }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+
+                {% else %}
+                    <div class="error">
+                        <h3>❌ Ошибка обработки</h3>
+                        <p>{{ result.error }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

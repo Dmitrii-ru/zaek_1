@@ -85,3 +85,44 @@ class UpdateStatsView(APIView):
 # async def test_func(request):
 #     await get_random_question_data()
 #     return HttpResponse("Hello, World!")
+from django.shortcuts import render
+from django.views import View
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.decorators import method_decorator
+from django.contrib import messages
+
+from .forms import CSVUploadForm
+from .utils.csv_loader import CSVLoader
+
+
+@method_decorator(staff_member_required, name='dispatch')
+class CSVUploadView(View):
+    """View для загрузки CSV файла с вопросами"""
+
+    def get(self, request):
+        form = CSVUploadForm()
+        return render(request, 'zaek_app/upload_csv.html', {'form': form})
+
+    def post(self, request):
+        form = CSVUploadForm(request.POST, request.FILES)
+
+        if not form.is_valid():
+            return render(request, 'zaek_app/upload_csv.html', {'form': form})
+
+        csv_file = form.cleaned_data['csv_file']
+
+        # Загружаем данные
+        loader = CSVLoader(csv_file)
+        result = loader.load()
+
+        # Добавляем сообщение об успехе/ошибке
+        if result['errors']:
+            messages.error(request, f'Загрузка завершена с ошибками. Пропущено: {result["skipped"]}')
+        else:
+            messages.success(request,
+                             f'Успешно загружено! Создано: {result["created"]}, Обновлено: {result["updated"]}')
+
+        return render(request, 'zaek_app/upload_csv.html', {
+            'form': form,
+            'result': result,
+        })

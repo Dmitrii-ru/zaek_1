@@ -45,7 +45,7 @@ class TopicCategory(models.Model):
 
 class ZaekTopic(models.Model):
     name = models.CharField(
-        verbose_name='Название темы',
+        verbose_name='Тема вопроса',
         max_length=100,
         unique=True,
         blank=False,
@@ -74,10 +74,10 @@ class ZaekProduct(models.Model):
 
     category = models.ForeignKey(
         TopicCategory,
-        verbose_name='Категория',
+        verbose_name='Продукт',
         on_delete=models.CASCADE,
         related_name='products',  # ✅ Правильно: TopicCategory.products.all()
-        help_text='Категория',
+        help_text='Продукт',
         blank=False,
         null=False,
     )

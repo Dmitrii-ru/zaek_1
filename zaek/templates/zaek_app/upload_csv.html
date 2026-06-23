@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загрузка CSV</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .form-group input[type="file"] {
+            display: block;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .form-group .help-text {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .results.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .results.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .results .stat {
+            margin: 5px 0;
+        }
+        .results .stat span {
+            font-weight: bold;
+        }
+        .results ul {
+            margin: 10px 0 0 20px;
+        }
+        .results ul li {
+            margin: 3px 0;
+        }
+        .requirements {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+        .requirements code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        .requirements table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .requirements table th,
+        .requirements table td {
+            border: 1px solid #dee2e6;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .requirements table th {
+            background: #f8f9fa;
+        }
+        .delimiter-info {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .delimiter-info strong {
+            color: #856404;
+        }
+        .new-column {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .new-column strong {
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📥 Загрузка вопросов из CSV</h1>
+
+        <div class="requirements">
+            <h3>📋 Требования к CSV файлу</h3>
+
+            <div class="delimiter-info">
+                <strong>⚠️ Внимание!</strong> Разделитель колонок: <code>$</code>
+            </div>
+
+            <div class="new-column">
+                <strong>✅ Новое!</strong> Добавлена колонка <code>Ссылка на изображение</code> для обновления картинки вопроса.
+            </div>
+
+            <ul>
+                <li><strong>Разделитель:</strong> <code>$</code> (знак доллара)</li>
+                <li><strong>Кодировка:</strong> UTF-8 или Windows-1251</li>
+                <li><strong>Колонки (обязательные):</strong></li>
+            </ul>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Колонка</th>
+                        <th>Описание</th>
+                        <th>Пример</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Название категории</code></td>
+                        <td>Категория продукта</td>
+                        <td>Электротехника, Материал</td>
+                    </tr>
+                    <tr>
+                        <td><code>Продукт</code></td>
+                        <td>Название продукта</td>
+                        <td>КНС пластик</td>
+                    </tr>
+                    <tr>
+                        <td><code>Вопрос</code></td>
+                        <td>Текст вопроса</td>
+                        <td>Из какого материала изготовлены муфты?</td>
+                    </tr>
+                    <tr>
+                        <td><code>Ответ</code></td>
+                        <td>Правильный ответ</td>
+                        <td>Никелированная латунь</td>
+                    </tr>
+                    <tr>
+                        <td><code>Тема вопроса</code></td>
+                        <td>Тематика вопроса</td>
+                        <td>Материалы, Электротехника</td>
+                    </tr>
+                    <tr>
+                        <td><code>Уровень сложности</code></td>
+                        <td>Числовой уровень (1, 2, 3)</td>
+                        <td>1</td>
+                    </tr>
+                    <tr style="background: #d4edda;">
+                        <td><code>Ссылка на изображение</code></td>
+                        <td>URL картинки для вопроса (опционально)</td>
+                        <td>https://www.dkc.ru/upload/iblock/441/4418051478376e1cf418d84b2a127e5a.jpg</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>💡 Важно:</strong> Если вопрос уже существует в базе, он будет обновлен (заменен правильный ответ и обновлена ссылка на изображение, если она указана).</p>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ form.csv_file.label_tag }}
+                {{ form.csv_file }}
+                {% if form.csv_file.help_text %}
+                    <div class="help-text">{{ form.csv_file.help_text }}</div>
+                {% endif %}
+                {% if form.csv_file.errors %}
+                    <div class="error" style="color: #721c24; margin-top: 10px;">
+                        {{ form.csv_file.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            <button type="submit">📤 Загрузить CSV</button>
+        </form>
+
+        {% if result %}
+            <div class="results {% if result.errors %}error{% else %}success{% endif %}">
+                <h3>📊 Результаты загрузки</h3>
+                <div class="stat">📌 Всего строк: <span>{{ result.total }}</span></div>
+                <div class="stat">✅ Создано записей: <span>{{ result.created }}</span></div>
+                <div class="stat">🔄 Обновлено записей: <span>{{ result.updated }}</span></div>
+                <div class="stat">⏭️ Пропущено: <span>{{ result.skipped }}</span></div>
+
+                {% if result.errors %}
+                    <h4 style="color: #721c24; margin-top: 15px;">❌ Ошибки:</h4>
+                    <ul>
+                        {% for error in result.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p style="color: #155724; margin-top: 15px;">✅ Все данные успешно загружены!</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

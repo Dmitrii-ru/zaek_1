@@ -11,7 +11,7 @@ class QuizForm(forms.Form):
         required=True
     )
 
-    
+
 class CSVUploadForm(forms.Form):
     csv_file = forms.FileField(
         label='CSV файл',

@@ -44,6 +44,6 @@ path('api/update_stats/', update_stats_api, name='zaek-update_stats-api'),
 
 # Дополнительные страницы
 path('decoded/', decoder_func, name='zaek-decoded'),
-path('upload-csv/', upload_csv, name='upload-csv'),
+path('upload-csv/', CSVUploadView.as_view(), name='upload-csv'),
 path('api/qa/', test_func, name='zaek-question'),
 ]

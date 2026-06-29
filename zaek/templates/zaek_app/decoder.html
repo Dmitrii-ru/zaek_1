@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -57,96 +57,103 @@
         .results {
             margin-top: 30px;
         }
-        .group {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #007bff;
-        }
-        .group h2 {
-            margin-top: 0;
-            color: #007bff;
-        }
-        .question {
+
+        /* Таблица */
+        .table-container {
             background: white;
-            padding: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .table-header {
+            background: #007bff;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .table-header h3 {
+            margin: 0;
+        }
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 20px;
             border-radius: 5px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
         }
-        .question h3 {
-            margin-top: 0;
-            color: #333;
+        .copy-btn:hover {
+            background: #218838;
         }
-        .question.error-question {
-            border-left: 4px solid #dc3545 !important;
-            background: #fff5f5 !important;
+        .table-scroll {
+            overflow-x: auto;
+            padding: 20px;
         }
-        .question.error-question .type-label {
-            background: #dc3545 !important;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
         }
-        .choices {
-            margin: 10px 0;
-            padding-left: 20px;
+        table th {
+            background: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
         }
-        .choice {
-            padding: 5px 10px;
-            margin: 3px 0;
-            border-radius: 3px;
+        table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
         }
-        .choice.correct {
-            background: #d4edda;
-            border-left: 3px solid #28a745;
+        table tr:hover {
+            background-color: #f8f9fa;
         }
-        .choice.incorrect {
-            background: #f8d7da;
+        .error-row {
+            background-color: #fff5f5 !important;
+        }
+        .error-row td:first-child {
             border-left: 3px solid #dc3545;
-        }
-        .choice.matching {
-            background: #e9ecef;
-            border-left: 3px solid #17a2b8;
-            padding: 8px 10px;
-        }
-        .choice.numeric {
-            background: #fff3cd;
-            border-left: 3px solid #ffc107;
-            padding: 8px 10px;
         }
         .badge {
             display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
             font-weight: bold;
-            margin-left: 10px;
         }
         .badge-success {
-            background: #28a745;
-            color: white;
-        }
-        .badge-info {
-            background: #17a2b8;
-            color: white;
+            background: #d4edda;
+            color: #155724;
         }
         .badge-danger {
-            background: #dc3545;
-            color: white;
-        }
-        .badge-warning {
-            background: #ffc107;
-            color: #333;
-        }
-        .error {
             background: #f8d7da;
             color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #f5c6cb;
-            margin-bottom: 15px;
         }
-        .error ul {
-            margin: 5px 0 0 20px;
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .answer-text {
+            font-weight: 500;
+            color: #28a745;
+        }
+        .empty-cell {
+            color: #adb5bd;
+            font-style: italic;
         }
         .stats {
             background: #e9ecef;
@@ -158,51 +165,41 @@
             font-weight: bold;
             color: #007bff;
         }
-        .stats .warning {
-            color: #856404;
-        }
-        .answer {
-            margin-top: 10px;
-            padding: 10px;
-            background: #d4edda;
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
             border-radius: 5px;
-            border: 1px solid #c3e6cb;
+            border: 1px solid #f5c6cb;
+            margin-bottom: 15px;
         }
-        .answer strong {
-            color: #155724;
-        }
-        .type-label {
-            display: inline-block;
-            padding: 2px 8px;
-            background: #6c757d;
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
             color: white;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-        .type-label.matching-label {
-            background: #17a2b8;
-        }
-        .type-label.numeric-label {
-            background: #ffc107;
-            color: #333;
-        }
-        .numeric-answer {
-            background: #fff3cd;
-            padding: 10px;
+            padding: 15px 25px;
             border-radius: 5px;
-            border: 1px solid #ffc107;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
         }
-        .numeric-answer code {
-            font-size: 18px;
-            font-weight: bold;
-            color: #856404;
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📚 Декодер викторины iSpring</h1>
+        <h1>📊 Декодер викторины iSpring</h1>
 
         <form method="post">
             {% csrf_token %}
@@ -215,133 +212,187 @@
                     </div>
                 {% endif %}
             </div>
-            <button type="submit">📊 Обработать викторину</button>
+            <button type="submit">🔍 Декодировать</button>
         </form>
 
         {% if result %}
             <div class="results">
                 <hr>
-                <h2>📊 Результаты обработки</h2>
+                <h2>📋 Результаты</h2>
 
                 {% if result.errors %}
-                    <div class="error" style="margin-bottom: 20px;">
-                        <h3>⚠️ Обнаружены ошибки при обработке:</h3>
+                    <div class="error">
+                        <h3>⚠️ Ошибки:</h3>
                         <ul>
                             {% for error in result.errors %}
                                 <li>
                                     {% if error.group %}
-                                        <strong>Группа: {{ error.group }}</strong>
+                                        <strong>{{ error.group }}</strong>
                                     {% endif %}
                                     {% if error.question_index %}
-                                        , Вопрос #{{ error.question_index }}
+                                        , вопрос #{{ error.question_index }}
                                     {% endif %}
                                     : {{ error.error }}
                                 </li>
                             {% endfor %}
                         </ul>
-                        {% if result.partial_success %}
-                            <p style="color: #856404; margin-top: 10px;">ℹ️ Остальные вопросы были обработаны успешно.</p>
-                        {% endif %}
                     </div>
                 {% endif %}
 
                 {% if result.success %}
                     <div class="stats">
-                        <p>📌 Найдено групп: <span>{{ result.groups|length }}</span></p>
-                        <p>📝 Успешно обработано вопросов: <span>{{ result.total_questions }}</span></p>
+                        <p>📁 Групп: <span>{{ result.groups|length }}</span></p>
+                        <p>📝 Вопросов: <span>{{ result.total_questions }}</span></p>
                         {% if result.errors %}
-                            <p style="color: #856404;">⚠️ С ошибками: <span class="warning">{{ result.errors|length }}</span></p>
+                            <p>⚠️ С ошибками: <span style="color: #856404;">{{ result.errors|length }}</span></p>
                         {% endif %}
                     </div>
 
-                    {% for group in result.groups %}
-                        <div class="group">
-                            <h2>📁 {{ group.name }}</h2>
-                            <p>Вопросов: {{ group.questions|length }}</p>
-
-                            {% for question in group.questions %}
-                                <div class="question {% if question.error %}error-question{% endif %}">
-                                    <h3>❓ {{ forloop.counter }}. {{ question.text }}</h3>
-                                    <span class="type-label {% if question.is_matching %}matching-label{% elif question.is_numeric %}numeric-label{% endif %}">{{ question.type }}</span>
-
-                                    {% if question.error %}
-                                        <div class="error" style="margin-top: 10px;">
-                                            <p>{{ question.correct_answers.0 }}</p>
-                                        </div>
-                                    {% endif %}
-
-                                    {% if question.is_numeric %}
-                                        <!-- Числовой вопрос -->
-                                        <div class="choices">
-                                            <p style="color: #6c757d; font-style: italic;">🔢 Введите числовой ответ</p>
-                                            <div class="numeric-answer">
-                                                <strong>✅ Правильный ответ:</strong> <code>{{ question.correct_answers.0 }}</code>
-                                            </div>
-                                        </div>
-                                    {% elif question.is_matching %}
-                                        <!-- Вопрос на сопоставление -->
-                                        <div class="choices">
-                                            <p style="color: #6c757d; font-style: italic; margin-bottom: 10px;">🔗 Сопоставьте элементы:</p>
-                                            {% for choice in question.choices %}
-                                                <div class="choice matching">
-                                                    {{ choice.text }}
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% elif question.has_choices %}
-                                        <!-- Обычные вопросы с вариантами -->
-                                        <div class="choices">
-                                            {% for choice in question.choices %}
-                                                <div class="choice {% if choice.is_correct %}correct{% else %}incorrect{% endif %}">
-                                                    {% if choice.is_correct %}✅{% else %}❌{% endif %} {{ choice.text }}
-                                                    {% if choice.is_correct %}
-                                                        <span class="badge badge-success">Правильный</span>
-                                                    {% endif %}
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% else %}
-                                        <!-- Вопросы без вариантов -->
-                                        <div class="choices">
-                                            <p style="color: #6c757d; font-style: italic;">📝 Вопрос без вариантов ответа</p>
-                                        </div>
-                                    {% endif %}
-
-                                    {% if question.correct_answers and not question.error and not question.is_numeric %}
-                                        <div class="answer">
-                                            <strong>🎯 Правильный ответ:</strong>
-                                            {% if question.correct_answers|length == 1 %}
-                                                {{ question.correct_answers.0 }}
-                                            {% else %}
-                                                <ul style="margin: 5px 0 0 20px;">
-                                                    {% for answer in question.correct_answers %}
-                                                        <li>{{ answer }}</li>
-                                                    {% endfor %}
-                                                </ul>
-                                            {% endif %}
-                                        </div>
-                                    {% endif %}
+                    <!-- ТАБЛИЦА ДЛЯ EXCEL -->
+                    {% if result.table_data %}
+                        <div class="table-container">
+                            <div class="table-header">
+                                <h3>📋 Таблица вопросов</h3>
+                                <div>
+                                    <button class="copy-btn" onclick="copyTable()">
+                                        📋 Копировать таблицу
+                                    </button>
                                 </div>
-                            {% endfor %}
+                            </div>
+                            <div class="table-scroll">
+                                <table id="excel-table">
+                                    <thead>
+                                        <tr>
+                                            <th>№</th>
+                                            <th>Группа</th>
+                                            <th>Вопрос</th>
+                                            <th>Тип</th>
+                                            <th>Правильный ответ</th>
+                                            <th>Варианты ответов</th>
+                                            <th>Ошибка</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in result.table_data %}
+                                            <tr {% if row.has_error == 'Да' %}class="error-row"{% endif %}>
+                                                <td>{{ row.num }}</td>
+                                                <td>{{ row.group }}</td>
+                                                <td style="max-width: 350px; word-wrap: break-word;">{{ row.question }}</td>
+                                                <td>
+                                                    <span class="badge
+                                                        {% if 'Сопоставление' in row.type %}badge-info
+                                                        {% elif 'Числовой' in row.type %}badge-warning
+                                                        {% elif row.has_error == 'Да' %}badge-danger
+                                                        {% else %}badge-success{% endif %}">
+                                                        {{ row.type }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {% if row.correct_answer %}
+                                                        <span class="answer-text">{{ row.correct_answer }}</span>
+                                                    {% else %}
+                                                        <span class="empty-cell">—</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td style="max-width: 350px; word-wrap: break-word;">
+                                                    {% if row.variants %}
+                                                        {{ row.variants }}
+                                                    {% elif row.matching_pairs %}
+                                                        {{ row.matching_pairs }}
+                                                    {% elif row.numeric_answer %}
+                                                        <span style="font-weight: bold; color: #856404;">{{ row.numeric_answer }}</span>
+                                                    {% else %}
+                                                        <span class="empty-cell">—</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if row.has_error == 'Да' %}
+                                                        <span class="badge badge-danger">❌</span>
+                                                    {% else %}
+                                                        <span class="badge badge-success">✅</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    {% endfor %}
-
+                    {% endif %}
                 {% else %}
                     <div class="error">
-                        <h3>❌ Ошибка обработки</h3>
+                        <h3>❌ Ошибка</h3>
                         <p>{{ result.error }}</p>
-                        {% if result.errors %}
-                            <h4>Детали ошибок:</h4>
-                            <ul>
-                                {% for error in result.errors %}
-                                    <li>{{ error.error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
                     </div>
                 {% endif %}
             </div>
         {% endif %}
     </div>
+
+    <script>
+        function copyTable() {
+            const table = document.getElementById('excel-table');
+
+            // Копируем как HTML для сохранения форматирования
+            const htmlContent = `
+                <html>
+                    <head><meta charset="UTF-8"></head>
+                    <body>
+                        ${table.outerHTML}
+                    </body>
+                </html>
+            `;
+
+            // Пробуем скопировать с форматированием
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const data = [new ClipboardItem({
+                'text/html': blob,
+                'text/plain': new Blob([getPlainText(table)], { type: 'text/plain' })
+            })];
+
+            navigator.clipboard.write(data).then(() => {
+                showToast('✅ Таблица скопирована! Вставьте в Excel (Ctrl+V)');
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '✅ Скопировано!';
+                setTimeout(() => btn.textContent = '📋 Копировать таблицу', 2000);
+            }).catch(() => {
+                // Fallback
+                const range = document.createRange();
+                range.selectNode(table);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                showToast('✅ Таблица скопирована! Вставьте в Excel (Ctrl+V)');
+            });
+        }
+
+        function getPlainText(table) {
+            let text = '';
+            const rows = table.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('th, td');
+                const rowText = Array.from(cells).map(cell => cell.textContent.trim()).join('\t');
+                text += rowText + '\n';
+            });
+            return text;
+        }
+
+        function showToast(message) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
 </body>
 </html>

@@ -1,0 +1,363 @@
+<!-- zaek/templates/zaek_app/category_detail.html -->
+{% extends 'zaek_app/base.html' %}
+
+{% block title %}Викторина - {{ category.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ category.name }}</h4>
+                <a href="{% url 'zaek_app:index' %}" class="btn btn-sm btn-light back-btn">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="progress" id="progress-bar">
+                    <div class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+                </div>
+
+                <div id="question-container" class="question-container">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Загрузка вопроса...</p>
+                    </div>
+                </div>
+
+                <div id="result-container"></div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-outline-secondary" id="reset-btn">
+                        <i class="bi bi-arrow-counterclockwise"></i> Сброс
+                    </button>
+                    <a href="{% url 'zaek_app:index' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-house"></i> Главная
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+const categoryId = {{ category.id }};
+let answeredQuestions = [];
+let isAnswered = false;
+let totalQuestions = 0;
+
+async function loadQuestion() {
+    try {
+        document.getElementById('result-container').innerHTML = '';
+
+        const response = await fetch("{% url 'zaek_app:get_question_ajax' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                category_id: categoryId,
+                answered_questions: answeredQuestions
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.completed) {
+            showCompletionMessage(data.message);
+            return;
+        }
+
+        renderQuestion(data);
+        updateProgress();
+        isAnswered = false;
+    } catch (error) {
+        console.error('Error loading question:', error);
+        document.getElementById('question-container').innerHTML = `
+            <div class="alert alert-danger text-center">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <strong>Ошибка загрузки вопроса</strong>
+                <p class="mb-0 small">${error.message}</p>
+                <button class="btn btn-primary btn-sm mt-2" onclick="loadQuestion()">
+                    <i class="bi bi-arrow-repeat"></i> Повторить
+                </button>
+            </div>
+        `;
+    }
+}
+
+function renderQuestion(data) {
+    const container = document.getElementById('question-container');
+
+    let difficultyColor = 'secondary';
+    if (data.difficulty_level) {
+        if (data.difficulty_level <= 1) difficultyColor = 'success';
+        else if (data.difficulty_level <= 2) difficultyColor = 'warning';
+        else difficultyColor = 'danger';
+    }
+
+    const isSingleAnswer = data.answers && data.answers.length === 1;
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+    let html = `
+        <div class="question-appear">
+            <div class="question-header">
+                <span class="badge bg-${difficultyColor} difficulty-badge">
+                    <i class="bi bi-star-fill"></i> ${data.difficulty || 'Без уровня'}
+                </span>
+                ${data.product_name ? `<span class="badge bg-info difficulty-badge">${data.product_name}</span>` : ''}
+                <span class="badge bg-secondary difficulty-badge">
+                    <i class="bi bi-question-circle"></i> #${answeredQuestions.length + 1}
+                </span>
+                ${isSingleAnswer ? '<span class="badge bg-warning difficulty-badge">⭐ Один вариант</span>' : ''}
+            </div>
+
+            <div class="question-text">${data.question_text}</div>
+    `;
+
+    // ============ ОТОБРАЖЕНИЕ ИЗОБРАЖЕНИЯ ============
+    if (data.image && data.image.url) {
+        html += `
+            <div class="question-image-container">
+                <img src="${data.image.url}"
+                     alt="Изображение к вопросу"
+                     class="question-image"
+                     onerror="this.parentElement.innerHTML='<div class=\\'text-muted small\\'><i class=\\'bi bi-image\\'></i> Изображение не загрузилось</div>'"
+                     onload="this.style.display='block'">
+            </div>
+        `;
+    }
+    // ================================================
+
+    html += '<div class="options-container mt-3">';
+
+    if (data.answers && data.answers.length > 0) {
+        data.answers.forEach((answer, index) => {
+            let btnClass = 'btn-outline-primary';
+            let extraClass = '';
+            let letterHtml = '';
+
+            if (isSingleAnswer) {
+                btnClass = 'btn-primary';
+                extraClass = 'single-option';
+            } else {
+                letterHtml = `<span class="option-letter">${letters[index] || '?'}</span>`;
+            }
+
+            html += `
+                <button class="btn ${btnClass} option-btn ${extraClass}"
+                        data-answer-id="${answer.id}"
+                        data-question-id="${data.question_id}"
+                        onclick="checkAnswer('${answer.id}', ${data.question_id}, this)">
+                    ${letterHtml}
+                    ${answer.text}
+                    ${isSingleAnswer ? ' ✅' : ''}
+                </button>
+            `;
+        });
+    }
+
+    html += '</div>';
+
+    if (isSingleAnswer) {
+        html += `
+            <div class="single-answer-hint">
+                <i class="bi bi-info-circle"></i> Нажмите на кнопку выше, чтобы ответить
+            </div>
+        `;
+    }
+
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+async function checkAnswer(answerId, questionId, button) {
+    if (isAnswered) return;
+    isAnswered = true;
+
+    document.querySelectorAll('.option-btn').forEach(btn => {
+        btn.classList.add('disabled');
+        btn.disabled = true;
+    });
+
+    try {
+        const response = await fetch("{% url 'zaek_app:check_answer_ajax' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                question_id: questionId,
+                answer_id: answerId
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        document.querySelectorAll('.option-btn').forEach(btn => {
+            btn.classList.remove('correct', 'incorrect', 'correct-answer');
+            if (btn.dataset.answerId == answerId) {
+                btn.classList.add(data.correct ? 'correct' : 'incorrect');
+            }
+            if (!data.correct && btn.dataset.answerId == data.correct_answer_id) {
+                btn.classList.add('correct-answer');
+            }
+        });
+
+        showResult(data.correct, data.comment);
+
+        if (data.correct) {
+            answeredQuestions.push(questionId);
+        }
+
+    } catch (error) {
+        console.error('Error checking answer:', error);
+        isAnswered = false;
+        document.querySelectorAll('.option-btn').forEach(btn => {
+            btn.classList.remove('disabled');
+            btn.disabled = false;
+        });
+        alert('Ошибка при проверке ответа. Попробуйте еще раз.');
+    }
+}
+
+function showResult(isCorrect, comment) {
+    const container = document.getElementById('result-container');
+
+    let html = '';
+    if (isCorrect) {
+        html = `
+            <div class="result-banner success">
+                <div class="d-flex align-items-center">
+                    <span class="icon">✅</span>
+                    <div>
+                        <strong>Правильно!</strong> Отличная работа!
+                    </div>
+                </div>
+                <button class="btn btn-success btn-sm next-btn" onclick="loadNextQuestion()">
+                    <i class="bi bi-arrow-right"></i> Следующий вопрос
+                </button>
+            </div>
+        `;
+    } else {
+        html = `
+            <div class="result-banner error">
+                <div class="d-flex align-items-center">
+                    <span class="icon">❌</span>
+                    <div>
+                        <strong>Неправильно!</strong>
+                        ${comment ? `<br><span class="small">💡 ${comment}</span>` : ''}
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-sm next-btn" onclick="loadNextQuestion()">
+                    <i class="bi bi-arrow-right"></i> Следующий вопрос
+                </button>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+function loadNextQuestion() {
+    document.getElementById('result-container').innerHTML = '';
+    loadQuestion();
+}
+
+function updateProgress() {
+    const progressBar = document.querySelector('.progress-bar');
+    if (totalQuestions === 0) {
+        totalQuestions = 10;
+    }
+    const progress = Math.min((answeredQuestions.length / totalQuestions) * 100, 100);
+    progressBar.style.width = `${progress}%`;
+    progressBar.textContent = `${Math.round(progress)}% (${answeredQuestions.length}/${totalQuestions})`;
+}
+
+function showCompletionMessage(message) {
+    const container = document.getElementById('question-container');
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="display-1 mb-3">🎉</div>
+            <h4 class="text-success">${message}</h4>
+            <p class="text-muted">Правильных ответов: ${answeredQuestions.length}</p>
+            <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
+                <button class="btn btn-primary" onclick="resetProgress()">
+                    <i class="bi bi-arrow-repeat"></i> Пройти заново
+                </button>
+                <a href="{% url 'zaek_app:index' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-house"></i> На главную
+                </a>
+            </div>
+        </div>
+    `;
+    document.getElementById('result-container').innerHTML = '';
+}
+
+async function resetProgress() {
+    if (!confirm('Вы уверены, что хотите сбросить прогресс?')) return;
+
+    try {
+        const response = await fetch(`/zaek/reset-category/${categoryId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            }
+        });
+
+        if (response.ok) {
+            answeredQuestions = [];
+            totalQuestions = 0;
+            updateProgress();
+            loadQuestion();
+        } else {
+            throw new Error('Failed to reset progress');
+        }
+    } catch (error) {
+        console.error('Error resetting progress:', error);
+        alert('Ошибка при сбросе прогресса.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (!csrftoken) {
+        console.warn('CSRF token not found.');
+    }
+    loadQuestion();
+    document.getElementById('reset-btn').addEventListener('click', resetProgress);
+});
+</script>
+{% endblock %}

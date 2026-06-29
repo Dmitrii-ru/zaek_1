@@ -13,7 +13,10 @@ charset-normalizer==3.4.2
 Django==5.0.6
 django-nested-admin==4.1.1
 django-redis==6.0.0
+django-stubs==6.0.6
+django-stubs-ext==6.0.6
 djangorestframework==3.16.0
+djangorestframework-stubs==3.17.0
 frozenlist==1.7.0
 idna==3.10
 lxml==6.1.1
@@ -31,6 +34,8 @@ python-socks==2.8.1
 redis==6.4.0
 requests==2.32.4
 sqlparse==0.5.3
+tomli==2.4.1
+types-PyYAML==6.0.12.20260518
 typing-inspection==0.4.1
 typing_extensions==4.14.1
 unword==0.2.2

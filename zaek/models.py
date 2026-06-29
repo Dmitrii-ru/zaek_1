@@ -3,7 +3,7 @@ from django.db import models
 
 class DifficultyLevel(models.Model):
     name = models.CharField(
-        verbose_name='Уровень сложности',
+        verbose_name='Название уровня',
         max_length=50,
         unique=True,
         blank=True,
@@ -11,9 +11,9 @@ class DifficultyLevel(models.Model):
     )
 
     level = models.PositiveIntegerField(
-        verbose_name='Числовой уровень',
+        verbose_name='Номер уровня',
         unique=True,
-        help_text='Число для сортировки (1-легкий, 2-средний, 3-сложный)'
+        help_text='Чем выше число (1-простой, 2-средний, 3-сложный)'
     )
 
     class Meta:
@@ -26,12 +26,12 @@ class DifficultyLevel(models.Model):
 
 
 class TopicCategory(models.Model):
-    """Тематическая категория топиков"""
+    """Категория тем вопросов"""
     name = models.CharField(
         verbose_name='Название категории',
         max_length=100,
         unique=True,
-        help_text='Например: Программирование, Дизайн, Маркетинг'
+        help_text='Например: электрика, оптика, механика'
     )
 
     class Meta:
@@ -45,7 +45,7 @@ class TopicCategory(models.Model):
 
 class ZaekTopic(models.Model):
     name = models.CharField(
-        verbose_name='Тема вопроса',
+        verbose_name='Имя темы',
         max_length=100,
         unique=True,
         blank=False,
@@ -71,13 +71,12 @@ class ZaekTopic(models.Model):
 
 
 class ZaekProduct(models.Model):
-
     category = models.ForeignKey(
         TopicCategory,
-        verbose_name='Продукт',
-        on_delete=models.CASCADE,
-        related_name='products',  # ✅ Правильно: TopicCategory.products.all()
-        help_text='Продукт',
+        verbose_name='Категория',
+        on_delete=models.CASCADE,  # При удалении категории - удаляются все продукты
+        related_name='products',
+        help_text='Категория продукта',
         blank=False,
         null=False,
     )
@@ -95,14 +94,14 @@ class ZaekProduct(models.Model):
         upload_to='products/',
         blank=True,
         null=True,
-        help_text='Изображение продукта (необязательно)'
+        help_text='Изображение продукта (желательно)'
     )
 
     image_url = models.URLField(
         verbose_name='Ссылка на изображение',
         blank=True,
         null=True,
-        help_text='Ссылка на изображение продукта (если нет загруженного файла)'
+        help_text='Ссылка на внешнее изображение (если нет загруженного файла)'
     )
 
     comment = models.TextField(
@@ -118,15 +117,15 @@ class ZaekProduct(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return f'{self.name}'  # ✅ Теперь поле art существует
+        return f'{self.name}'
 
 
 class ZaekQuestion(models.Model):
     topic = models.ForeignKey(
         ZaekTopic,
         verbose_name='Тема',
-        on_delete=models.CASCADE,
-        related_name='questions',  #  ZaekTopic.questions.all()
+        on_delete=models.CASCADE,  # При удалении темы - удаляются все вопросы
+        related_name='questions',
         help_text='Тема вопроса',
         blank=False,
         null=False,
@@ -135,7 +134,7 @@ class ZaekQuestion(models.Model):
     difficulty = models.ForeignKey(
         DifficultyLevel,
         verbose_name='Уровень сложности',
-        on_delete=models.PROTECT,
+        on_delete=models.PROTECT,  # Защита от удаления уровня, если есть вопросы
         null=False,
         blank=False,
         related_name='questions',
@@ -144,12 +143,12 @@ class ZaekQuestion(models.Model):
 
     product = models.ForeignKey(
         ZaekProduct,
-        verbose_name='Связанный продукт',
-        on_delete=models.SET_NULL,
+        verbose_name='Продукт вопроса',
+        on_delete=models.SET_NULL,  # При удалении продукта - у вопроса остается NULL
         blank=True,
         null=True,
-        related_name='questions',  # ZaekProduct.questions.all()
-        help_text='Необязательная привязка к продукту'
+        related_name='questions',
+        help_text='Привязка продукта к вопросу'
     )
 
     name = models.TextField(
@@ -163,9 +162,8 @@ class ZaekQuestion(models.Model):
         verbose_name='Ссылка на изображение',
         blank=True,
         null=True,
-        help_text='Ссылка на изображение продукта'
+        help_text='Ссылка на изображение для вопроса'
     )
-
 
     comment = models.TextField(
         verbose_name='Комментарий',
@@ -185,19 +183,19 @@ class ZaekQuestion(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.name[:50]}'  # ✅ Убрал лишний символ в начале
+        return f'{self.name[:50]}'
 
 
 class ZaekAnswer(models.Model):
     question = models.ForeignKey(
         ZaekQuestion,
         verbose_name='Вопрос',
-        on_delete=models.CASCADE,
-        related_name='answers'  # ZaekQuestion.answers.all()
+        on_delete=models.CASCADE,  # При удалении вопроса - удаляются все ответы
+        related_name='answers'
     )
 
     text = models.TextField(
-        verbose_name='Ответ',
+        verbose_name='Текст',
         blank=False,
         null=False,
         max_length=500,
@@ -244,13 +242,13 @@ class ZaekUser(models.Model):
     total_attempts = models.PositiveIntegerField(
         verbose_name='Всего попыток',
         default=0,
-        help_text='Общее количество данных пользователем ответов'
+        help_text='Общее количество попыток ответить на вопросы'
     )
 
     correct_attempts = models.PositiveIntegerField(
-        verbose_name='Правильные ответы',
+        verbose_name='Правильных ответов',
         default=0,
-        help_text='Количество верных ответов пользователя'
+        help_text='Количество правильных ответов пользователя'
     )
 
     created_at = models.DateTimeField(
@@ -293,8 +291,8 @@ class ZaekUser(models.Model):
 class Reminder(models.Model):
     user = models.ForeignKey(
         ZaekUser,
-        on_delete=models.CASCADE,
-        related_name="reminders"  # ✅ Правильно: ZaekUser.reminders.all()
+        on_delete=models.CASCADE,  # При удалении пользователя - удаляются все напоминания
+        related_name="reminders"
     )
 
     text = models.CharField(
@@ -316,8 +314,7 @@ class Reminder(models.Model):
         return f'Напоминание для {self.user.name_telegram}: {self.text[:30]}'
 
     def save(self, *args, **kwargs):
-        """Переопределяем save для гарантии использования правильного времени"""
         from django.utils import timezone
-        if not self.id:  # только при создании
+        if not self.id:
             self.created_at = timezone.now()
         super().save(*args, **kwargs)

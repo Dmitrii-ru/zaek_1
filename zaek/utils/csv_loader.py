@@ -275,7 +275,7 @@ class CSVLoader:
             'created': self.created_count,
             'updated': self.updated_count,
             'skipped': self.skipped_count,
-            'errors': self.errors,
+             'errors': [str(error) for error in self.errors],
         }
 
 # zaek/utils/csv_loader.py

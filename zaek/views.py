@@ -97,6 +97,7 @@ from .utils.csv_loader import CSVLoader
 
 @method_decorator(staff_member_required, name='dispatch')
 class CSVUploadView(View):
+
     """View для загрузки CSV файла с вопросами"""
 
     def get(self, request):
@@ -104,9 +105,11 @@ class CSVUploadView(View):
         return render(request, 'zaek_app/upload_csv.html', {'form': form})
 
     def post(self, request):
+        print('CSVUploadView(View)')
         form = CSVUploadForm(request.POST, request.FILES)
 
         if not form.is_valid():
+            print('if not form.is_valid()')
             return render(request, 'zaek_app/upload_csv.html', {'form': form})
 
         csv_file = form.cleaned_data['csv_file']

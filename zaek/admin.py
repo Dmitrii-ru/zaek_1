@@ -13,17 +13,17 @@ class ZaekAnswerInline(nested_admin.NestedTabularInline):
     verbose_name_plural = "Ответы"
 
 
-class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
-    list_display = ['name',  'product','difficulty']
-    list_filter = ['product']
-    search_fields = ['name']
-    inlines = [ZaekAnswerInline]  # Вложенные ответы
-
-    fieldsets = (
-        (None, {
-            'fields': ('name',  'product', 'comment','difficulty')
-        }),
-    )
+# class ZaekQuestionAdmin(nested_admin.NestedModelAdmin):
+#     list_display = ['name',  'product','difficulty']
+#     list_filter = ['product']
+#     search_fields = ['name']
+#     inlines = [ZaekAnswerInline]  # Вложенные ответы
+#
+#     fieldsets = (
+#         (None, {
+#             'fields': ('name',  'product', 'comment','difficulty')
+#         }),
+#     )
 
 
 class ZaekQuestionInline(nested_admin.NestedTabularInline):
@@ -57,6 +57,6 @@ class ZaekTopicAdmin(admin.ModelAdmin):
 # Регистрация всех моделей
 admin.site.register(ZaekTopic, ZaekTopicAdmin)
 admin.site.register(ZaekProduct, ZaekProductAdmin)
-admin.site.register(ZaekQuestion, ZaekQuestionAdmin)
+# admin.site.register(ZaekQuestion, ZaekQuestionAdmin)
 admin.site.register(TopicCategory)
 admin.site.register(DifficultyLevel)

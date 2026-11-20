@@ -2,12 +2,10 @@ from django import views
 from django.urls import path
 
 
-from .views import (ZaekUserAPIView,
-                    RandomQuestionAPIView,
-                    UpdateStatsView,
-                    CSVUploadView,
-                    index, category_detail, user_profile, get_question_ajax, check_answer_ajax, reset_category,
-                    zaek_user_api, random_question_api, update_stats_api, upload_csv, test_func)
+from .views import (
+    CSVUploadView,
+    index, category_detail, user_profile, get_question_ajax, check_answer_ajax, reset_category,
+    zaek_user_api, random_question_api, update_stats_api, upload_csv, test_func, test_CSV)
 from .utils.decoded import decoder_func
 app_name = 'zaek_app'
 
@@ -46,4 +44,5 @@ path('api/update_stats/', update_stats_api, name='zaek-update_stats-api'),
 path('decoded/', decoder_func, name='zaek-decoded'),
 path('upload-csv/', CSVUploadView.as_view(), name='upload-csv'),
 path('api/qa/', test_func, name='zaek-question'),
+path('upload-csv-test/', test_CSV, name='upload-csv-test'),
 ]

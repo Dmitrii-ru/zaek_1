@@ -1,7 +1,6 @@
-<!-- zaek/templates/zaek_app/category_detail.html -->
 {% extends 'zaek_app/base.html' %}
 
-{% block title %}Викторина - {{ category.name }}{% endblock %}
+{% block title %}Тестирование - {{ category.name }}{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -45,6 +44,209 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+    /* Стили для множественного выбора */
+    .option-check {
+        padding: 10px 15px;
+        margin-bottom: 8px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .option-check:hover {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+
+    .option-check .form-check-input {
+        margin-top: 5px;
+        margin-right: 10px;
+    }
+
+    .option-check .option-letter {
+        font-weight: bold;
+        color: #495057;
+        margin-right: 8px;
+    }
+
+    .option-check.correct-answer {
+        border-color: #28a745 !important;
+        background-color: #d4edda !important;
+    }
+
+    .option-check.incorrect-answer {
+        border-color: #dc3545 !important;
+        background-color: #f8d7da !important;
+    }
+
+    .option-check .form-check-input:checked {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+    .option-check .form-check-input:disabled {
+        opacity: 0.7;
+    }
+
+    /* Бейджи типов */
+    .difficulty-badge {
+        font-size: 12px;
+        padding: 5px 10px;
+        margin: 2px;
+    }
+
+    .question-header {
+        margin-bottom: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-items: center;
+    }
+
+    .question-text {
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+
+    .question-image-container {
+        text-align: center;
+        margin: 15px 0;
+    }
+
+    .question-image {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .options-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .option-btn {
+        text-align: left;
+        padding: 12px 20px;
+        border-radius: 8px;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .option-btn .option-letter {
+        font-weight: bold;
+        min-width: 24px;
+        background: rgba(0,0,0,0.05);
+        border-radius: 50%;
+        padding: 2px 8px;
+        text-align: center;
+    }
+
+    .option-btn.correct {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+        color: white !important;
+    }
+
+    .option-btn.incorrect {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: white !important;
+    }
+
+    .option-btn.correct-answer {
+        background-color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+
+    .option-btn.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .single-answer-hint {
+        margin-top: 10px;
+        font-size: 14px;
+        color: #6c757d;
+        text-align: center;
+    }
+
+    .result-banner {
+        margin-top: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .result-banner.success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+    }
+
+    .result-banner.error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+    }
+
+    .result-banner .icon {
+        font-size: 28px;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+
+    .next-btn {
+        margin-left: auto;
+        min-width: 150px;
+        flex-shrink: 0;
+    }
+
+    .question-appear {
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    #submit-multiple-btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+    }
+
+    #submit-multiple-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .form-check-input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .form-check-label {
+        cursor: pointer;
+        user-select: none;
+    }
+</style>
+
 <script>
 function getCookie(name) {
     let cookieValue = null;
@@ -66,10 +268,14 @@ const categoryId = {{ category.id }};
 let answeredQuestions = [];
 let isAnswered = false;
 let totalQuestions = 0;
+let selectedAnswers = [];
+let questionType = 'single';
 
 async function loadQuestion() {
     try {
         document.getElementById('result-container').innerHTML = '';
+        selectedAnswers = [];
+        isAnswered = false;
 
         const response = await fetch("{% url 'zaek_app:get_question_ajax' %}", {
             method: 'POST',
@@ -94,6 +300,7 @@ async function loadQuestion() {
             return;
         }
 
+        questionType = data.question_type || 'single';
         renderQuestion(data);
         updateProgress();
         isAnswered = false;
@@ -116,32 +323,52 @@ function renderQuestion(data) {
     const container = document.getElementById('question-container');
 
     let difficultyColor = 'secondary';
-    if (data.difficulty_level) {
-        if (data.difficulty_level <= 1) difficultyColor = 'success';
-        else if (data.difficulty_level <= 2) difficultyColor = 'warning';
+    if (data.difficulty) {
+        if (data.difficulty <= 1) difficultyColor = 'success';
+        else if (data.difficulty <= 2) difficultyColor = 'warning';
         else difficultyColor = 'danger';
     }
 
-    const isSingleAnswer = data.answers && data.answers.length === 1;
+    // Определяем тип вопроса для отображения
+    const typeLabels = {
+        'single': 'Выбор ответа',
+        'multiple': 'Множественный выбор',
+        'text': 'Текстовый ответ',
+        'match': 'Соответствие'
+    };
+
+    const typeColors = {
+        'single': 'primary',
+        'multiple': 'success',
+        'text': 'warning',
+        'match': 'info'
+    };
+
+    const typeLabel = typeLabels[data.question_type] || 'Выбор ответа';
+    const typeColor = typeColors[data.question_type] || 'primary';
+
     const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
     let html = `
         <div class="question-appear">
             <div class="question-header">
                 <span class="badge bg-${difficultyColor} difficulty-badge">
-                    <i class="bi bi-star-fill"></i> ${data.difficulty || 'Без уровня'}
+                    <i class="bi bi-star-fill"></i> ${data.difficulty || 'Нет уровня'}
+                </span>
+                <span class="badge bg-${typeColor} difficulty-badge">
+                    <i class="bi bi-tag"></i> ${typeLabel}
                 </span>
                 ${data.product_name ? `<span class="badge bg-info difficulty-badge">${data.product_name}</span>` : ''}
                 <span class="badge bg-secondary difficulty-badge">
                     <i class="bi bi-question-circle"></i> #${answeredQuestions.length + 1}
                 </span>
-                ${isSingleAnswer ? '<span class="badge bg-warning difficulty-badge">⭐ Один вариант</span>' : ''}
+                ${data.question_type === 'multiple' ? '<span class="badge bg-success difficulty-badge">✅ Можно выбрать несколько</span>' : ''}
             </div>
 
             <div class="question-text">${data.question_text}</div>
     `;
 
-    // ============ ОТОБРАЖЕНИЕ ИЗОБРАЖЕНИЯ ============
+    // Изображение
     if (data.image && data.image.url) {
         html += `
             <div class="question-image-container">
@@ -153,49 +380,133 @@ function renderQuestion(data) {
             </div>
         `;
     }
-    // ================================================
 
     html += '<div class="options-container mt-3">';
 
     if (data.answers && data.answers.length > 0) {
-        data.answers.forEach((answer, index) => {
-            let btnClass = 'btn-outline-primary';
-            let extraClass = '';
-            let letterHtml = '';
-
-            if (isSingleAnswer) {
-                btnClass = 'btn-primary';
-                extraClass = 'single-option';
-            } else {
-                letterHtml = `<span class="option-letter">${letters[index] || '?'}</span>`;
-            }
+        if (data.question_type === 'multiple') {
+            // Множественный выбор - чекбоксы
+            data.answers.forEach((answer, index) => {
+                html += `
+                    <div class="form-check option-check">
+                        <input class="form-check-input multiple-option" type="checkbox"
+                               data-answer-id="${answer.id}"
+                               data-question-id="${data.question_id}"
+                               id="answer_${answer.id}">
+                        <label class="form-check-label" for="answer_${answer.id}">
+                            <span class="option-letter">${letters[index] || '?'}</span>
+                            ${answer.text}
+                        </label>
+                    </div>
+                `;
+            });
 
             html += `
-                <button class="btn ${btnClass} option-btn ${extraClass}"
-                        data-answer-id="${answer.id}"
-                        data-question-id="${data.question_id}"
-                        onclick="checkAnswer('${answer.id}', ${data.question_id}, this)">
-                    ${letterHtml}
-                    ${answer.text}
-                    ${isSingleAnswer ? ' ✅' : ''}
-                </button>
+                <div class="mt-3">
+                    <button class="btn btn-success" id="submit-multiple-btn" onclick="submitMultipleAnswers()">
+                        <i class="bi bi-check2-circle"></i> Проверить ответы
+                    </button>
+                    <span class="text-muted ms-2 small">Выберите все правильные варианты</span>
+                </div>
             `;
-        });
+
+        } else {
+            // Одиночный выбор - кнопки
+            data.answers.forEach((answer, index) => {
+                html += `
+                    <button class="btn btn-outline-primary option-btn"
+                            data-answer-id="${answer.id}"
+                            data-question-id="${data.question_id}"
+                            onclick="checkAnswer('${answer.id}', ${data.question_id}, this)">
+                        <span class="option-letter">${letters[index] || '?'}</span>
+                        ${answer.text}
+                    </button>
+                `;
+            });
+        }
     }
 
     html += '</div>';
-
-    if (isSingleAnswer) {
-        html += `
-            <div class="single-answer-hint">
-                <i class="bi bi-info-circle"></i> Нажмите на кнопку выше, чтобы ответить
-            </div>
-        `;
-    }
-
     html += '</div>';
 
     container.innerHTML = html;
+
+    // Если множественный выбор, добавляем обработчики для чекбоксов
+    if (data.question_type === 'multiple') {
+        document.querySelectorAll('.multiple-option').forEach(cb => {
+            cb.addEventListener('change', function() {
+                if (this.checked) {
+                    if (!selectedAnswers.includes(this.dataset.answerId)) {
+                        selectedAnswers.push(this.dataset.answerId);
+                    }
+                } else {
+                    selectedAnswers = selectedAnswers.filter(id => id !== this.dataset.answerId);
+                }
+            });
+        });
+    }
+}
+
+async function submitMultipleAnswers() {
+    if (isAnswered) return;
+    if (selectedAnswers.length === 0) {
+        alert('Пожалуйста, выберите хотя бы один вариант ответа!');
+        return;
+    }
+
+    isAnswered = true;
+    document.querySelectorAll('.multiple-option').forEach(cb => cb.disabled = true);
+    const submitBtn = document.getElementById('submit-multiple-btn');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        const firstCheckbox = document.querySelector('.multiple-option');
+        const questionId = firstCheckbox?.dataset?.questionId;
+        if (!questionId) throw new Error('ID вопроса не найден');
+
+        const response = await fetch("{% url 'zaek_app:check_answer_ajax' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                question_id: questionId,
+                answer_ids: selectedAnswers
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Подсвечиваем правильные/неправильные ответы
+        document.querySelectorAll('.multiple-option').forEach(cb => {
+            const container = cb.closest('.option-check');
+            if (data.correct_answer_ids && data.correct_answer_ids.includes(Number(cb.dataset.answerId))) {
+                container.classList.add('correct-answer');
+                cb.checked = true;
+            } else if (cb.checked && !data.correct_answer_ids.includes(Number(cb.dataset.answerId))) {
+                container.classList.add('incorrect-answer');
+                cb.checked = false;
+            }
+        });
+
+        showResult(data.correct, data.comment);
+
+        if (data.correct) {
+            answeredQuestions.push(questionId);
+        }
+
+    } catch (error) {
+        console.error('Error checking multiple answers:', error);
+        isAnswered = false;
+        document.querySelectorAll('.multiple-option').forEach(cb => cb.disabled = false);
+        if (submitBtn) submitBtn.disabled = false;
+        alert('Ошибка при проверке ответа. Попробуйте еще раз.');
+    }
 }
 
 async function checkAnswer(answerId, questionId, button) {
@@ -216,7 +527,7 @@ async function checkAnswer(answerId, questionId, button) {
             },
             body: JSON.stringify({
                 question_id: questionId,
-                answer_id: answerId
+                answer_ids: [answerId]
             })
         });
 
@@ -228,11 +539,11 @@ async function checkAnswer(answerId, questionId, button) {
 
         document.querySelectorAll('.option-btn').forEach(btn => {
             btn.classList.remove('correct', 'incorrect', 'correct-answer');
+            if (data.correct_answer_ids && data.correct_answer_ids.includes(Number(btn.dataset.answerId))) {
+                btn.classList.add('correct-answer');
+            }
             if (btn.dataset.answerId == answerId) {
                 btn.classList.add(data.correct ? 'correct' : 'incorrect');
-            }
-            if (!data.correct && btn.dataset.answerId == data.correct_answer_id) {
-                btn.classList.add('correct-answer');
             }
         });
 
@@ -263,7 +574,8 @@ function showResult(isCorrect, comment) {
                 <div class="d-flex align-items-center">
                     <span class="icon">✅</span>
                     <div>
-                        <strong>Правильно!</strong> Отличная работа!
+                        <strong>Правильно!</strong> Отличный ответ!
+                        ${comment ? `<br><span class="small text-muted">💡 ${comment}</span>` : ''}
                     </div>
                 </div>
                 <button class="btn btn-success btn-sm next-btn" onclick="loadNextQuestion()">
@@ -278,7 +590,7 @@ function showResult(isCorrect, comment) {
                     <span class="icon">❌</span>
                     <div>
                         <strong>Неправильно!</strong>
-                        ${comment ? `<br><span class="small">💡 ${comment}</span>` : ''}
+                        ${comment ? `<br><span class="small">💡 ${comment}</span>` : '<br><span class="small">Попробуйте запомнить правильный ответ</span>'}
                     </div>
                 </div>
                 <button class="btn btn-danger btn-sm next-btn" onclick="loadNextQuestion()">
@@ -315,7 +627,7 @@ function showCompletionMessage(message) {
             <p class="text-muted">Правильных ответов: ${answeredQuestions.length}</p>
             <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
                 <button class="btn btn-primary" onclick="resetProgress()">
-                    <i class="bi bi-arrow-repeat"></i> Пройти заново
+                    <i class="bi bi-arrow-repeat"></i> Начать заново
                 </button>
                 <a href="{% url 'zaek_app:index' %}" class="btn btn-outline-primary">
                     <i class="bi bi-house"></i> На главную

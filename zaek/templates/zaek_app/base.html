@@ -143,10 +143,10 @@
 
         /* Стили для вопроса */
         .question-container {
-            animation: fadeIn 0.5s;
-            max-height: 70vh;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            /*animation: fadeIn 0.5s;*/
+            /*max-height: 70vh;*/
+            /*overflow-y: auto;*/
+            /*-webkit-overflow-scrolling: touch;*/
         }
 
         @keyframes fadeIn {
@@ -466,6 +466,9 @@
         <div class="container">
             <a class="navbar-brand" href="{% url 'zaek_app:index' %}">
                 <i class="bi bi-trophy-fill"></i> Zaek
+            </a>
+            <a class="navbar-brand" href="{% url 'zaek_app:zaek-decoded' %}">
+                <i class="bi bi-trophy-fill"></i> decoded
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                     aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">

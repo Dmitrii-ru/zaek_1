@@ -23,6 +23,10 @@
             border-bottom: 3px solid #007bff;
             padding-bottom: 10px;
         }
+        h3 {
+            color: #333;
+            margin-top: 20px;
+        }
         .form-group {
             margin-bottom: 20px;
         }
@@ -45,7 +49,7 @@
             font-size: 14px;
             margin-top: 5px;
         }
-        button {
+        .btn-primary {
             background: #007bff;
             color: white;
             border: none;
@@ -55,7 +59,7 @@
             font-size: 16px;
             transition: background 0.3s;
         }
-        button:hover {
+        .btn-primary:hover {
             background: #0056b3;
         }
         .results {
@@ -132,28 +136,114 @@
         .new-column strong {
             color: #155724;
         }
+        .type-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .type-single {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .type-multiple {
+            background: #d4edda;
+            color: #155724;
+        }
+        .type-text {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .type-match {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .error-text {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px 15px;
+            border-radius: 5px;
+            color: #721c24;
+        }
+        .messages {
+            margin: 20px 0;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .example-csv {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            margin: 10px 0;
+        }
+        .upload-form {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📥 Загрузка вопросов из CSV</h1>
 
+        <!-- Сообщения -->
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <div class="requirements">
             <h3>📋 Требования к CSV файлу</h3>
 
             <div class="delimiter-info">
-                <strong>⚠️ Внимание!</strong> Разделитель колонок: <code>$</code>
+                <strong>⚠️ Важно!</strong> Разделитель колонок: <code>$</code>
             </div>
 
             <div class="new-column">
-                <strong>✅ Новое!</strong> Добавлена колонка <code>Ссылка на изображение</code> для обновления картинки вопроса.
+                <strong>✅ Поддерживаются типы вопросов:</strong>
+                <span class="type-badge type-single">Выбор ответа</span>
+                <span class="type-badge type-multiple">Множественный выбор</span>
+                <span class="type-badge type-text">Текстовый ответ</span>
+                <span class="type-badge type-match">Соответствие</span>
             </div>
 
             <ul>
-                <li><strong>Разделитель:</strong> <code>$</code> (знак доллара)</li>
+                <li><strong>Разделитель колонок:</strong> <code>$</code> (доллар)</li>
                 <li><strong>Кодировка:</strong> UTF-8 или Windows-1251</li>
-                <li><strong>Колонки (обязательные):</strong></li>
+                <li><strong>Разделитель внутри ячеек:</strong> <code>|</code> (вертикальная черта) для вариантов ответов</li>
+                <li><strong>Обязательные колонки:</strong> <code>Тема</code>, <code>Продукт</code>, <code>Вопрос</code>, <code>Тип</code>, <code>Правильный ответ</code></li>
             </ul>
+
             <table>
                 <thead>
                     <tr>
@@ -164,68 +254,95 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td><code>Название категории</code></td>
-                        <td>Категория продукта</td>
-                        <td>Электротехника, Материал</td>
+                        <td><code>Тема</code></td>
+                        <td>Название темы (группа вопросов)</td>
+                        <td>Тест</td>
                     </tr>
                     <tr>
                         <td><code>Продукт</code></td>
-                        <td>Название продукта</td>
-                        <td>КНС пластик</td>
+                        <td>Название продукта/категории</td>
+                        <td>Трубы и ОРМ</td>
                     </tr>
                     <tr>
                         <td><code>Вопрос</code></td>
                         <td>Текст вопроса</td>
-                        <td>Из какого материала изготовлены муфты?</td>
+                        <td>Какую степень защиты имеет металлорукав?</td>
                     </tr>
                     <tr>
-                        <td><code>Ответ</code></td>
-                        <td>Правильный ответ</td>
-                        <td>Никелированная латунь</td>
+                        <td><code>Тип</code></td>
+                        <td>Тип вопроса</td>
+                        <td>
+                            <span class="type-badge type-single">Выбор ответа</span> |
+                            <span class="type-badge type-multiple">Множественный выбор</span> |
+                            <span class="type-badge type-text">Текстовый ответ</span> |
+                            <span class="type-badge type-match">Соответствие</span>
+                        </td>
                     </tr>
                     <tr>
-                        <td><code>Тема вопроса</code></td>
-                        <td>Тематика вопроса</td>
-                        <td>Материалы, Электротехника</td>
+                        <td><code>Правильный ответ</code></td>
+                        <td>Правильный ответ(ы).<br>Для <strong>множественного выбора</strong> — через <code>|</code></td>
+                        <td>IP44<br>IP44|IP55</td>
                     </tr>
                     <tr>
-                        <td><code>Уровень сложности</code></td>
-                        <td>Числовой уровень (1, 2, 3)</td>
+                        <td><code>Варианты ответов</code></td>
+                        <td>Все варианты через <code>|</code><br><strong>Обязательно</strong> для <code>Выбор ответа</code> и <code>Множественный выбор</code></td>
+                        <td>IP44|IP55|IP66/67|IP68</td>
+                    </tr>
+                    <tr>
+                        <td><code>Сложность</code></td>
+                        <td>Уровень сложности (1, 2, 3)</td>
                         <td>1</td>
                     </tr>
                     <tr style="background: #d4edda;">
-                        <td><code>Ссылка на изображение</code></td>
-                        <td>URL картинки для вопроса (опционально)</td>
-                        <td>https://www.dkc.ru/upload/iblock/441/4418051478376e1cf418d84b2a127e5a.jpg</td>
+                        <td><code>URL картинки</code></td>
+                        <td>Ссылка на изображение для вопроса (опционально)</td>
+                        <td>https://example.com/image.jpg</td>
                     </tr>
                 </tbody>
             </table>
-            <p><strong>💡 Важно:</strong> Если вопрос уже существует в базе, он будет обновлен (заменен правильный ответ и обновлена ссылка на изображение, если она указана).</p>
+
+            <h4>📝 Пример CSV:</h4>
+            <div class="example-csv">
+                Тема$Продукт$Вопрос$Тип$Правильный ответ$Варианты ответов$Сложность$URL картинки<br>
+                Тест$Трубы и ОРМ$Какую степень защиты имеет металлорукав?$Выбор ответа$IP44$IP44|IP55|IP66/67|IP68$1$https://example.com/1.jpg<br>
+                Тест$Трубы и ОРМ$Выберите виды металлорукава$Множественный выбор$Металлорукав в ПВХ|Металлорукав в SEBS$Металлорукав в ПВХ|Металлорукав в SEBS|Металлорукав в ПНД$2$<br>
+                Тест$Трубы и ОРМ$Назовите минимальный диаметр$Текстовый ответ$10 мм$$1$
+            </div>
+
+            <p><strong>💡 Подсказка:</strong> Если картинка не нужна, оставьте колонку <code>URL картинки</code> пустой.</p>
         </div>
 
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                {{ form.csv_file.label_tag }}
-                {{ form.csv_file }}
-                {% if form.csv_file.help_text %}
-                    <div class="help-text">{{ form.csv_file.help_text }}</div>
-                {% endif %}
-                {% if form.csv_file.errors %}
-                    <div class="error" style="color: #721c24; margin-top: 10px;">
-                        {{ form.csv_file.errors }}
-                    </div>
-                {% endif %}
-            </div>
-            <button type="submit">📤 Загрузить CSV</button>
-        </form>
+        <!-- === ФОРМА ДЛЯ ЗАГРУЗКИ === -->
+        <div class="upload-form">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
 
+                <div class="form-group">
+                    <label for="{{ form.csv_file.id_for_label }}">{{ form.csv_file.label }}</label>
+                    {{ form.csv_file }}
+                    {% if form.csv_file.help_text %}
+                        <div class="help-text">{{ form.csv_file.help_text }}</div>
+                    {% endif %}
+                    {% if form.csv_file.errors %}
+                        <div class="error-text">
+                            {{ form.csv_file.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    📤 Загрузить CSV
+                </button>
+            </form>
+        </div>
+
+        <!-- Результаты загрузки -->
         {% if result %}
             <div class="results {% if result.errors %}error{% else %}success{% endif %}">
                 <h3>📊 Результаты загрузки</h3>
-                <div class="stat">📌 Всего строк: <span>{{ result.total }}</span></div>
-                <div class="stat">✅ Создано записей: <span>{{ result.created }}</span></div>
-                <div class="stat">🔄 Обновлено записей: <span>{{ result.updated }}</span></div>
+                <div class="stat">📄 Всего строк: <span>{{ result.total }}</span></div>
+                <div class="stat">✅ Создано: <span>{{ result.created }}</span></div>
+                <div class="stat">🔄 Обновлено: <span>{{ result.updated }}</span></div>
                 <div class="stat">⏭️ Пропущено: <span>{{ result.skipped }}</span></div>
 
                 {% if result.errors %}
@@ -236,7 +353,7 @@
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p style="color: #155724; margin-top: 15px;">✅ Все данные успешно загружены!</p>
+                    <p style="color: #155724; margin-top: 15px;">✅ Все вопросы успешно загружены!</p>
                 {% endif %}
             </div>
         {% endif %}

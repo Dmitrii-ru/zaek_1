@@ -36,7 +36,7 @@ class TopicCategory(models.Model):
 
     class Meta:
         verbose_name = 'Категория темы'
-        verbose_name_plural = 'Категории тем'
+        verbose_name_plural = 'Темы'
         ordering = ['name']
 
     def __str__(self):
@@ -45,7 +45,7 @@ class TopicCategory(models.Model):
 
 class ZaekTopic(models.Model):
     name = models.CharField(
-        verbose_name='Имя темы',
+        verbose_name='Тема ответа',
         max_length=100,
         unique=True,
         blank=False,
@@ -73,7 +73,7 @@ class ZaekTopic(models.Model):
 class ZaekProduct(models.Model):
     category = models.ForeignKey(
         TopicCategory,
-        verbose_name='Категория',
+        verbose_name='Продукт',
         on_delete=models.CASCADE,  # При удалении категории - удаляются все продукты
         related_name='products',
         help_text='Категория продукта',
@@ -113,7 +113,7 @@ class ZaekProduct(models.Model):
 
     class Meta:
         verbose_name = 'Продукт'
-        verbose_name_plural = 'Продукты'
+        verbose_name_plural = 'Подтемы'
         ordering = ['name']
 
     def __str__(self):
@@ -121,6 +121,22 @@ class ZaekProduct(models.Model):
 
 
 class ZaekQuestion(models.Model):
+
+    QUESTION_TYPES = [
+        ('single', 'Выбор ответа'),
+        ('multiple', 'Множественный выбор'),
+        ('text', 'Текстовый ответ'),
+        ('match', 'Соответствие'),
+    ]
+
+    question_type = models.CharField(
+        verbose_name='Вопрос',
+        max_length=20,
+        choices=QUESTION_TYPES,
+        default='single',
+        help_text='Тип вопроса: выбор ответа, множественный выбор, текстовый ответ, соответствие'
+    )
+
     topic = models.ForeignKey(
         ZaekTopic,
         verbose_name='Тема',
@@ -144,7 +160,7 @@ class ZaekQuestion(models.Model):
     product = models.ForeignKey(
         ZaekProduct,
         verbose_name='Продукт вопроса',
-        on_delete=models.SET_NULL,  # При удалении продукта - у вопроса остается NULL
+        on_delete=models.CASCADE,  # При удалении продукта - у вопроса остается NULL
         blank=True,
         null=True,
         related_name='questions',
@@ -189,8 +205,9 @@ class ZaekQuestion(models.Model):
 class ZaekAnswer(models.Model):
     question = models.ForeignKey(
         ZaekQuestion,
-        verbose_name='Вопрос',
-        on_delete=models.CASCADE,  # При удалении вопроса - удаляются все ответы
+        on_delete=models.SET_NULL,
+        null=True,  # Обязательно нужно добавить
+        blank=True,
         related_name='answers'
     )
 

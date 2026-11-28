@@ -184,3 +184,71 @@ class UserSessionAther:
 
     def save(self):
         self.session.modified = True
+
+
+from datetime import date
+from todo.models import TodoTask
+
+
+class UserTodoDB:
+    def __init__(self, request):
+        self.user = request.user
+        # Если пользователь не авторизован, можно выбрасывать ошибку
+        # или использовать анонимного пользователя (но лучше требовать логин)
+        if not self.user.is_authenticated:
+            raise PermissionError("Пользователь должен быть авторизован")
+
+    def get_obj(self, day_str):
+        # Возвращает словарь в формате, который ожидает ваш шаблон и календарь
+        d = date.fromisoformat(day_str)
+        tasks = TodoTask.objects.filter(user=self.user, date=d)
+
+        actual = [t.text for t in tasks if not t.is_closed]
+        close = [t.text for t in tasks if t.is_closed]
+
+        # Формат имени как в вашем старом коде: "Суббота 28 Ноября 2026"
+        name = d.strftime("%A %d %B %Y").title()
+
+        return {
+            'slug': day_str,
+            'name': name,
+            'actual': actual,
+            'close': close
+        }
+
+    def add_todo(self, todo_text, day_str):
+        d = date.fromisoformat(day_str)
+        TodoTask.objects.create(user=self.user, date=d, text=todo_text, is_closed=False)
+
+    def replace_del(self, day_str, post_data, rep=False):
+        # post_data приходит в виде списка: ['текст задачи', 'actual'] или ['текст задачи', 'close']
+        todo_text = post_data[0]
+        old_status = post_data[1]
+        d = date.fromisoformat(day_str)
+
+        # Ищем задачу
+        task = TodoTask.objects.filter(user=self.user, date=d, text=todo_text).first()
+        if task:
+            if rep:
+                # Переключаем статус
+                task.is_closed = not task.is_closed
+                task.save()
+            else:
+                # Удаляем
+                task.delete()
+
+    # Заглушки для календаря (чтобы не падал)
+    @property
+    def todo_days(self):
+        # Возвращаем словарь всех дней с задачами в нужном формате
+        # Это нужно для календаря, который проверяет dd['actual']
+        days = {}
+        for task in TodoTask.objects.filter(user=self.user):
+            day_str = task.date.isoformat()
+            if day_str not in days:
+                days[day_str] = {'actual': [], 'close': []}
+            if task.is_closed:
+                days[day_str]['close'].append(task.text)
+            else:
+                days[day_str]['actual'].append(task.text)
+        return days

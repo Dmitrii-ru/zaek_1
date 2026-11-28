@@ -19,12 +19,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
 ]
 
 INSTALLED_APPS+= [
     'zaek',
     'nested_admin',
-    'rest_framework'
+    'rest_framework',
+    'todo',
+    'widget_tweaks'
 ]
 
 MIDDLEWARE = [
@@ -116,5 +119,12 @@ REDIS_USER_STATS = {
     'DB': 2,
     'PASSWORD': None,
 }
+
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+USER_SESSION = 'user_session'
+USER_SESSION_EMAIL_ID = 'user_session_email'
+USER_SESSION_TODO_ID = 'user_session_todo'
+USER_SESSION_ATHER = 'user_session_ather'
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 МБ
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 МБ

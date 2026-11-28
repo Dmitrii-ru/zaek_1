@@ -1,0 +1,83 @@
+
+.text_foll{
+  font-family: 'Marck Script', cursive;
+  font-family: 'Montserrat', sans-serif;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 200;
+  color:rgb(44, 42, 42);
+
+}
+
+.border_prod_list{
+  border-top: 3px solid rgb(44, 42, 42);
+}
+
+.centered {
+    width: 300px;
+    margin-top: auto;
+    background: #E7EAEF;
+    padding: 10px;
+    border: 2px solid #69da6d83;
+    border-radius: 2px;
+
+}
+
+.centered2 {
+    width: 1000px;
+    margin-top: auto;
+    padding: 10px;
+}
+
+.decorat a {
+  color: #000 !important;
+  text-decoration: none
+}
+
+.button_user {
+  border: 2px solid #b1e2a6;
+  background-color: #69da6d83; /* Green */
+  color: white;
+  padding: 7px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 2px;
+}
+
+.button_user:hover {
+  border: 2px solid #69da6d83;
+
+}
+#id_email{
+    margin-top: 9px;
+}
+
+
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+}
+header {
+    padding: 10px;
+}
+
+main {
+    flex: 1;
+    padding: 20px;
+}
+
+footer {
+    padding: 10px;
+    text-align: center;
+}
+
+
+.fb_title{
+    width: 100%;
+    text-align: center;
+}

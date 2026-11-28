@@ -1,10 +1,10 @@
 from django.utils.safestring import mark_safe
 from django.shortcuts import redirect, get_object_or_404, render
 from django.views.generic import ListView
-from todo.utils.user_session import UserSessionToDo, get_today, get_date, navigate_month
+from todo.utils.user_session import UserSessionToDo, get_today, get_date, navigate_month, UserTodoDB
 from .forms import AddTodo
 from todo.utils.calendar_session_todo import MyCalendar
-
+from django.contrib.auth.decorators import login_required
 
 def get_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -20,16 +20,15 @@ def get_ip(request):
 
 
 
+@login_required
 def TodoSessionView(request, **kwargs):
-    ust = UserSessionToDo(request)
+    ust = UserTodoDB(request) # <-- используем новый класс
+    # ... дальше код почти не меняется, но убираем передачу сессии в форму
     form_add_todo = AddTodo()
     if request.method == "POST":
-        post = request.POST.copy()
-        post['day_slug'] = request.POST['add']
-        post['sess'] = request.session.session_key
-        form_add_todo = AddTodo(post)
-
+        form_add_todo = AddTodo(request.POST)
         if form_add_todo.is_valid():
+            # В форму больше не нужно передавать session_key
             ust.add_todo(request.POST['todo'], request.POST['add'])
             return redirect(request.path)
     today = get_today().isoformat()
